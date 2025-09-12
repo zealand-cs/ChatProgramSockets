@@ -22,8 +22,8 @@ public class Server {
     }
 
     public void startServer() {
-        String emojiLookupPath = this.getClass().getResource("emojiLookup.csv").getPath();
-        EmojiReplace replacer = new EmojiReplace(emojiLookupPath);
+        /*String emojiLookupPath = this.getClass().getResource("/emojiLookup.csv").getPath();
+        EmojiReplace replacer = new EmojiReplace("emojiLookup.csv");*/
 
         // Try with resources automatically closes the ServerSocket if an exception
         // occurs

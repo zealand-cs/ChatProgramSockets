@@ -11,6 +11,8 @@ public class EmojiReplace {
     public EmojiReplace(String file) {
         emojiLookup = new HashMap<>();
 
+        // String emojiLookupPath = this.getClass().getClassLoader().getResourceAsStream("/emojiLookup.csv");
+
         try {
             Files.lines(Paths.get(file)).forEach(v -> {
                 var seperated = v.split(";");
