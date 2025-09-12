@@ -7,13 +7,13 @@
     self,
     nixpkgs,
   }: let
-    supportedSystems = ["x86_64-linux"];
+    systems = ["x86_64-linux"];
 
     eachSystem = function:
-      nixpkgs.lib.genAttrs supportedSystems
+      nixpkgs.lib.genAttrs systems
       (system: function nixpkgs.legacyPackages.${system});
   in {
-    devShell = eachSystem (
+    devShells = eachSystem (
       pkgs: let
         jdk-version = "21";
         jdk = pkgs."jdk${jdk-version}";
