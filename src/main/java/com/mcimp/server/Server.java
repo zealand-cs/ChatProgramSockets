@@ -5,6 +5,8 @@ import java.net.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.mcimp.utils.EmojiReplace;
+
 public class Server {
 
     private final ExecutorService pool;
@@ -20,6 +22,8 @@ public class Server {
     }
 
     public void startServer() {
+        String emojiLookupPath = this.getClass().getResource("emojiLookup.csv").getPath();
+        EmojiReplace replacer = new EmojiReplace(emojiLookupPath);
 
         // Try with resources automatically closes the ServerSocket if an exception
         // occurs
@@ -46,4 +50,3 @@ public class Server {
     }
 
 }
-
