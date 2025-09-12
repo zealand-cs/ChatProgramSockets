@@ -12,6 +12,8 @@ public class ClientHandler implements Runnable {
 
     private Socket socket;
 
+    private String username;
+
     public ClientHandler(Socket socket, int timeout) {
         this.socket = socket;
         this.timeout = timeout;
@@ -25,7 +27,6 @@ public class ClientHandler implements Runnable {
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
 
-
         } catch (IOException e) {
             logger.error(e);
         } finally {
@@ -35,5 +36,13 @@ public class ClientHandler implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+
+    public Socket getSocket() {
+        return socket;
+    }
+    
+    public void sendMessage(Room room, ClientHandler sender, String message) {
+        
     }
 }

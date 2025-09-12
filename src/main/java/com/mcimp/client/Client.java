@@ -10,7 +10,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
-public class Client{
+public class Client {
     private static final Logger logger = LogManager.getLogger(Client.class);
 
     private String hostname;
