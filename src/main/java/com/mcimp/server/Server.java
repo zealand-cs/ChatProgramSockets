@@ -3,13 +3,17 @@ package com.mcimp.server;
 import java.io.*;
 import java.net.*;
 import java.util.HashMap;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.mcimp.repository.UserRepository;
 import com.mcimp.utils.EmojiReplace;
 
 public class Server {
-
+    private static UserRepository repo;
+    private static final Set<String> loggedInUsers = ConcurrentHashMap.newKeySet();
     private final ExecutorService pool;
 
     private int port;
@@ -32,8 +36,9 @@ public class Server {
     }
 
     public void startServer() {
-        String emojiLookupPath = this.getClass().getResource("emojiLookup.csv").getPath();
-        EmojiReplace replacer = new EmojiReplace(emojiLookupPath);
+        running = true;
+        //String emojiLookupPath = this.getClass().getResource("emojiLookup.csv").getPath();
+        //EmojiReplace replacer = new EmojiReplace(emojiLookupPath);
 
         // Try with resources automatically closes the ServerSocket if an exception
         // occurs
@@ -44,7 +49,7 @@ public class Server {
             while (running) {
                 Socket clientSocket = serverSocket.accept();
 
-                var client = new ClientHandler(clientSocket, clientTimeout);
+                var client = new ClientHandler(clientSocket, clientTimeout, repo, loggedInUsers);
                 var address = clientSocket.getInetAddress();
 
                 state.addClient(address, client);
@@ -53,15 +58,17 @@ public class Server {
                  * Creates a new thread to handle clients seperately
                  * ClientHandler implements Runnable
                  */
-                pool.execute(new ClientHandler(clientSocket, clientTimeout));
+                pool.execute(new ClientHandler(clientSocket, clientTimeout, repo, loggedInUsers));
             }
         } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         Server server = new Server(5, 5555, 5 * 60 * 1000);
+
+        repo = new UserRepository("users.json");
         server.startServer();
     }
 }

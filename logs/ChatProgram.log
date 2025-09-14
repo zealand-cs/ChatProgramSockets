@@ -1,0 +1,2 @@
+2025-09-14 17:16:06 [main] ERROR: unknown IO Exception occoured: java.net.ConnectException: Connection refused: connect
+2025-09-14 17:16:31 [main] ERROR: unknown IO Exception occoured: java.net.ConnectException: Connection refused: connect
