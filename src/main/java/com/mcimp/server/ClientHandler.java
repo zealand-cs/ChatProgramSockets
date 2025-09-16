@@ -14,7 +14,7 @@ public class ClientHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(ClientHandler.class);
 
 
-    private static UserRepository repo;
+    private UserRepository repo;
     private Set<String> loggedInUsers = ConcurrentHashMap.newKeySet();
     private final int timeout;
     private Socket socket;

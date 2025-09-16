@@ -9,6 +9,11 @@ public class Packet {
     private PacketType type;
     private long epochSecond;
 
+    public Packet(PacketType type) {
+        this.type = type;
+        this.epochSecond = ZonedDateTime.now().toEpochSecond();
+    }
+
     public Packet(PacketType type, long epochSecond) {
         this.type = type;
         this.epochSecond = epochSecond;

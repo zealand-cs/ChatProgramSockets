@@ -1,4 +1,4 @@
-package com.mcimp.protocol;
+package com.mcimp.protocol.messages;
 
 public enum MessageType {
     Text,

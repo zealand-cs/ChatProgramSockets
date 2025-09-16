@@ -1,7 +1,9 @@
 package com.mcimp.protocol;
 
-enum PacketType {
+public enum PacketType {
+    Connect,
     Connected,
+    Disconnect,
     Disconnected,
     // For further implementation
     Banned,
@@ -13,10 +15,12 @@ enum PacketType {
 
     public byte toByte() {
         return switch (this) {
-            case Connected -> 1;
-            case Disconnected -> 2;
-            case Banned -> 3;
-            case Unbanned -> 4;
+            case Connect -> 1;
+            case Connected -> 2;
+            case Disconnect -> 3;
+            case Disconnected -> 4;
+            case Banned -> 5;
+            case Unbanned -> 6;
 
             case Command -> 100;
             case Message -> 101;
@@ -25,10 +29,13 @@ enum PacketType {
 
     public static PacketType fromByte(byte c) {
         return switch (c) {
-            case 1 -> Connected;
-            case 2 -> Disconnected;
-            case 3 -> Banned;
-            case 4 -> Unbanned;
+            case 1 -> Connect;
+            case 2 -> Connected;
+            case 3 -> Disconnect;
+            case 4 -> Disconnected;
+            case 5 -> Banned;
+            case 6 -> Unbanned;
+
             case 100 -> Command;
             case 101 -> Message;
             default -> throw new RuntimeException("invalid packet type id");
