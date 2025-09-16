@@ -3,43 +3,42 @@ package com.mcimp.protocol;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.time.ZonedDateTime;
 
-public class Packet {
+import com.mcimp.protocol.commands.Command;
+import com.mcimp.protocol.messages.Message;
+import com.mcimp.protocol.packets.AuthPacket;
+import com.mcimp.protocol.packets.ConnectPacket;
+import com.mcimp.protocol.packets.ConnectedPacket;
+import com.mcimp.protocol.packets.DisconnectPacket;
+import com.mcimp.protocol.packets.DisconnectedPacket;
+
+public abstract class Packet {
     private PacketType type;
-    private long epochSecond;
 
     public Packet(PacketType type) {
         this.type = type;
-        this.epochSecond = ZonedDateTime.now().toEpochSecond();
-    }
-
-    public Packet(PacketType type, long epochSecond) {
-        this.type = type;
-        this.epochSecond = epochSecond;
-    }
-
-    public Packet(PacketType type, ZonedDateTime datetime) {
-        this(type, datetime.toEpochSecond());
     }
 
     public void writeToStream(DataOutputStream stream) throws IOException {
         stream.writeByte(type.toByte());
-        stream.writeLong(epochSecond);
     }
 
-    public static Packet readFromStream(DataInputStream stream) throws IOException {
+    public static Packet readPacket(DataInputStream stream) throws IOException {
         var type = PacketType.fromByte(stream.readByte());
-        var epochSecond = stream.readLong();
 
-        return new Packet(type, epochSecond);
+        return switch (type) {
+            case PacketType.Connect -> ConnectPacket.readFromStream(stream);
+            case PacketType.Connected -> ConnectedPacket.readFromStream(stream);
+            case PacketType.Disconnect -> DisconnectPacket.readFromStream(stream);
+            case PacketType.Disconnected -> DisconnectedPacket.readFromStream(stream);
+            case PacketType.Auth -> AuthPacket.readFromStream(stream);
+            case PacketType.Banned, PacketType.Unbanned -> throw new RuntimeException("ban and unban not implemented");
+            case PacketType.Command -> Command.readCommand(stream);
+            case PacketType.Message -> Message.readMessage(stream);
+        };
     }
 
     public PacketType getType() {
         return type;
-    }
-
-    public long getEpochSecond() {
-        return epochSecond;
     }
 }

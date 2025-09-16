@@ -5,6 +5,8 @@ public enum PacketType {
     Connected,
     Disconnect,
     Disconnected,
+    Auth,
+
     // For further implementation
     Banned,
     // For further implementation
@@ -19,8 +21,11 @@ public enum PacketType {
             case Connected -> 2;
             case Disconnect -> 3;
             case Disconnected -> 4;
-            case Banned -> 5;
-            case Unbanned -> 6;
+            case Auth -> 5;
+
+            // Bans are not implemented
+            case Banned -> 10;
+            case Unbanned -> 11;
 
             case Command -> 100;
             case Message -> 101;
@@ -33,8 +38,11 @@ public enum PacketType {
             case 2 -> Connected;
             case 3 -> Disconnect;
             case 4 -> Disconnected;
-            case 5 -> Banned;
-            case 6 -> Unbanned;
+            case 5 -> Auth;
+
+            // Bans are not implemented
+            case 10 -> Banned;
+            case 11 -> Unbanned;
 
             case 100 -> Command;
             case 101 -> Message;

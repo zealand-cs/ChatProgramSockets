@@ -13,15 +13,7 @@ public class ConnectPacket extends Packet {
         super(PACKET_TYPE);
     }
 
-    public ConnectPacket(Packet packet) {
-        super(packet.getType(), packet.getEpochSecond());
-        assert packet.getType() == PACKET_TYPE;
-    }
-
     public static ConnectPacket readFromStream(DataInputStream stream) throws IOException {
-        var packet = Packet.readFromStream(stream);
-        assert packet.getType() == PACKET_TYPE;
-
-        return new ConnectPacket(packet);
+        return new ConnectPacket();
     }
 }

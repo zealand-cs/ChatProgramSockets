@@ -3,30 +3,25 @@ package com.mcimp.protocol.messages;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.time.ZonedDateTime;
 
 import com.mcimp.protocol.Packet;
 import com.mcimp.protocol.PacketType;
 
-public class Message extends Packet {
+public abstract class Message extends Packet {
     private final static PacketType PACKET_TYPE = PacketType.Message;
 
-    MessageType messageType;
+    private MessageType messageType;
+    private long epochSecond;
 
-    public Message(MessageType messageType) {
+    public Message(MessageType messageType, long epochSecond) {
         super(PACKET_TYPE);
         this.messageType = messageType;
+        this.epochSecond = epochSecond;
     }
 
-    public Message(Packet packet, MessageType messageType) {
-        super(packet.getType(), packet.getEpochSecond());
-        assert packet.getType() == PACKET_TYPE;
-
-        this.messageType = messageType;
-    }
-
-    public Message(Message message) {
-        super(message.getType(), message.getEpochSecond());
-        assert message.getType() == PACKET_TYPE;
+    public Message(MessageType messageType) {
+        this(messageType, ZonedDateTime.now().toEpochSecond());
     }
 
     public MessageType getMessageType() {
@@ -37,61 +32,29 @@ public class Message extends Packet {
     public void writeToStream(DataOutputStream stream) throws IOException {
         super.writeToStream(stream);
         stream.writeByte(messageType.toByte());
+        stream.writeLong(epochSecond);
     }
 
-    public static Message readFromStream(DataInputStream stream) throws IOException {
-        var packet = Packet.readFromStream(stream);
-        assert packet.getType() == PACKET_TYPE;
+    public static Message readMessage(DataInputStream stream) throws IOException {
+        var type = MessageType.fromByte(stream.readByte());
+        var epoch = stream.readLong();
 
-        var messageType = MessageType.fromByte(stream.readByte());
-
-        return new Message(packet, messageType);
-    }
-}
-
-class ClientTextMessage {
-    String date;
-    String text;
-
-    // Client writes
-    void writeToStream() {
-        // write date
-        // write size
-        // write text
+        Message message = switch (type) {
+            case MessageType.System -> SystemMessage.readFromStream(stream);
+            case MessageType.Text -> TextMessage.readFromStream(stream);
+            case MessageType.Emoji -> EmojiMessage.readFromStream(stream);
+            case MessageType.File ->
+                throw new RuntimeException("not implemented yet");
+        };
+        message.setEpochSecond(epoch);
+        return message;
     }
 
-    // Server reads
-    void readFromStream() {
-        // read date
-        // read size
-        // read text
-    }
-}
-
-class ServerTextMessage {
-    String username;
-    String date;
-    String text;
-
-    // Server writes
-    void writeToStream() {
-        // write message type
-
-        // write username size
-        // write username itself
-
-        // write date
-        // write size
-        // write text
+    public long getEpochSecond() {
+        return epochSecond;
     }
 
-    // Client reads
-    void readFromStream() {
-        // read username size
-        // read username itself
-
-        // read date
-        // read size
-        // read text
+    public void setEpochSecond(long epoch) {
+        this.epochSecond = epoch;
     }
 }

@@ -3,6 +3,13 @@ package com.mcimp.client;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.mcimp.protocol.ProtocolInputStream;
+import com.mcimp.protocol.ProtocolOutputStream;
+import com.mcimp.protocol.messages.SystemMessage;
+import com.mcimp.protocol.packets.AuthPacket;
+import com.mcimp.protocol.packets.AuthType;
+import com.mcimp.protocol.packets.ConnectPacket;
+
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -26,27 +33,27 @@ public class Client {
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(hostname, port), timeout);
 
-
-            // Auto-flush enabled even though it's probably not necessary
-            PrintWriter writer = new PrintWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF-8"), true);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), "UTF-8"));
             BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
+            try (
+                    ProtocolInputStream input = new ProtocolInputStream(socket.getInputStream());
+                    ProtocolOutputStream output = new ProtocolOutputStream(socket.getOutputStream())) {
 
-            new Thread(() -> {
-                try {
-                    String serverMsg;
-                    while ((serverMsg = reader.readLine()) != null) {
-                        System.out.println("SERVER: " + serverMsg);
-                    }
-                } catch (IOException e) {
-                    logger.error("error while reading from server: " + e);
-                }
-        }).start();
+                output.writePacket(new ConnectPacket());
 
-            String input;
-            while ((input = consoleReader.readLine()) != null) {
-                writer.println(input);
+                var welcomeMessage = (SystemMessage) input.readPacket();
+                System.out.println(welcomeMessage.getText());
+
+                System.out.println("Login or register?");
+                System.out.println("1. login");
+                System.out.println("2. register");
+
+                var authType = consoleReader.readLine();
+
+                output.writePacket(new AuthPacket(AuthType.Login, "t", "t"));
+
+                // Handle incoming packets
+                new Thread(new IncomingHandler(input)).start();
             }
 
         } catch (SocketTimeoutException e) {

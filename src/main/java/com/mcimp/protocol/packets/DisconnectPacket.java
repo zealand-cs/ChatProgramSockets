@@ -13,14 +13,7 @@ public class DisconnectPacket extends Packet {
         super(PACKET_TYPE);
     }
 
-    public DisconnectPacket(Packet packet) {
-        super(packet.getType(), packet.getEpochSecond());
-        assert packet.getType() == PACKET_TYPE;
-    }
-
     public static DisconnectPacket readFromStream(DataInputStream stream) throws IOException {
-        var packet = Packet.readFromStream(stream);
-        assert packet.getType() == PACKET_TYPE;
-        return new DisconnectPacket(packet);
+        return new DisconnectPacket();
     }
 }
