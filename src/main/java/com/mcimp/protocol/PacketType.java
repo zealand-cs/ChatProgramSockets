@@ -50,3 +50,22 @@ public enum PacketType {
         };
     }
 }
+
+// Packets sent from the client to the server
+// Client -> Server
+// enum ClientPacketType {
+//     Connect,
+//     Disconnect,
+//     Auth,
+//     Command,
+//     Message;
+// }
+
+// Packets sent from the server to the clients
+// Server -> Client
+// enum ServerPacketType {
+//     Connected,
+//     Disconnected,
+//     Message;
+// }
+

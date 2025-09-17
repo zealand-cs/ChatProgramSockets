@@ -27,4 +27,8 @@ public class TextMessage extends Message {
 
         return new TextMessage(text);
     }
+
+    public String getText() {
+        return text;
+    }
 }

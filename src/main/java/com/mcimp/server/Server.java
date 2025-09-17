@@ -12,7 +12,6 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import com.mcimp.repository.UserRepository;
-import com.mcimp.utils.EmojiReplace;
 
 public class Server {
     private static final Logger logger = LogManager.getLogger(Server.class);
@@ -22,15 +21,13 @@ public class Server {
     private final ExecutorService pool;
 
     private int port;
-    private int clientTimeout;
 
     private ServerState state;
 
-    public Server(int threads, int port, int timeout) {
+    public Server(int threads, int port) {
         pool = Executors.newFixedThreadPool(threads);
 
         this.port = port;
-        this.clientTimeout = timeout;
         this.state = new ServerState(new HashMap<>());
     }
 
@@ -55,7 +52,7 @@ public class Server {
             while (running) {
                 Socket clientSocket = serverSocket.accept();
 
-                var client = new ClientHandler(clientSocket, clientTimeout, repo, loggedInUsers, state);
+                var client = new ClientHandler(clientSocket, state, repo, loggedInUsers);
                 var address = clientSocket.getInetAddress();
 
                 state.addClient(address, client);
@@ -72,7 +69,7 @@ public class Server {
     }
 
     public static void main(String[] args) throws IOException {
-        Server server = new Server(5, 5555, 5 * 60 * 1000);
+        Server server = new Server(5, 5555);
 
         repo = new UserRepository("users.json");
         server.startServer();
