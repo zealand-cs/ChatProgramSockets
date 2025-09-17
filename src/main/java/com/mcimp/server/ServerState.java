@@ -1,5 +1,6 @@
 package com.mcimp.server;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,45 +9,75 @@ import java.util.List;
 import java.util.Map;
 
 import com.mcimp.protocol.Packet;
+import com.mcimp.protocol.commands.JoinCommand;
 
 public class ServerState {
-    private short latestId = 0;
+    private short latestClientId = 0;
     private Map<InetAddress, Short> clientIds;
     private Map<Short, ClientHandler> clients;
 
-    private short latestRoomId = 0;
-    private List<Room> rooms;
+    private Map<String, Room> rooms;
+
+    // Mapping of client ids to room ids
+    private Map<Short, String> roomClients;
 
     public ServerState(Map<InetAddress, ClientHandler> clients) {
         this.clientIds = Collections.synchronizedMap(new HashMap<>());
         this.clients = Collections.synchronizedMap(new HashMap<>());
 
-        List<Room> rooms = new ArrayList<>();
-        rooms.add(new Room(latestRoomId, "Global"));
-        this.rooms = Collections.synchronizedList(rooms);
+        this.rooms = Collections.synchronizedMap(new HashMap<>());
+        this.roomClients = Collections.synchronizedMap(new HashMap<>());
+
+        createRoom(JoinCommand.DEFAULT_ROOM, "Global");
     }
 
-    public void addClient(InetAddress address, ClientHandler client) {
-        synchronized (clients) {
-            clientIds.put(address, ++latestId);
-            clients.put(latestId, client);
-        }
+    public synchronized void addClient(InetAddress address, ClientHandler client) {
+        clientIds.put(address, ++latestClientId);
+        clients.put(latestClientId, client);
+        roomClients.put(latestClientId, JoinCommand.DEFAULT_ROOM);
     }
 
-    public void removeClient(InetAddress address) {
-        synchronized (clients) {
-            var id = clientIds.get(address);
-            clients.remove(id);
-            clientIds.remove(address);
-        }
+    public synchronized void removeClient(InetAddress address) {
+        var id = clientIds.get(address);
+        clients.remove(id);
+        roomClients.remove(id);
+        clientIds.remove(address);
     }
 
-    public void createRoom(String name) {
-        rooms.add(new Room(++latestRoomId, name));
+    public synchronized void createRoom(String id, String displayName) {
+        rooms.put(id, new Room(id, displayName));
     }
 
-    public void removeRoom(Room room) {
-        rooms.remove(room);
+    public synchronized void removeRoom(String id) {
+        rooms.remove(id);
+    }
+
+    public synchronized void moveClientToRoom(Short clientId, String roomId) {
+        var client = clients.get(clientId);
+        // TODO: Handle null case
+
+        var newRoom = rooms.get(roomId);
+        // TODO: Handle null case
+
+        var oldRoomId = roomClients.put(clientId, roomId);
+        var room = rooms.get(oldRoomId);
+        // TODO: Handle null case
+        room.removeClient(client);
+        newRoom.addClient(client);
+    }
+
+    public Room getClientRoom(InetAddress address) {
+        var clientId = getClientId(address);
+        // TODO: Handle null case
+        return getClientRoom(clientId);
+    }
+
+    public Room getClientRoom(Short clientId) {
+        var roomId = roomClients.get(clientId);
+        // TODO: Handle null case
+        var room = rooms.get(roomId);
+        // TODO: Handle null case
+        return room;
     }
 
     public ClientHandler getClient(short id) {
@@ -58,37 +89,42 @@ public class ServerState {
         return clients.get(id);
     }
 
-    public List<Room> getRooms() {
+    public Short getClientId(InetAddress address) {
+        return clientIds.get(address);
+    }
+
+    public Map<String, Room> getRooms() {
         return rooms;
     }
 }
 
 class Room {
-    private int id;
+    private String id;
     private String name;
 
     private List<ClientHandler> clients;
 
-    public Room(int id, String name) {
+    public Room(String id, String name) {
         this.id = id;
         this.name = name;
+        this.clients = new ArrayList<>();
     }
 
-    public void sendPacket(ClientHandler sender, Packet packet) {
+    public void sendPacket(ClientHandler sender, Packet packet) throws IOException {
         for (var client : clients) {
-            // client.sendPacket(sender, packet);
+            // client.getOutput().writePacket(packet);
         }
     }
 
-    public void addClient(ClientHandler client) {
-        clients.add(client);
+    public void addClient(ClientHandler clien) {
+        clients.add(clien);
     }
 
     public void removeClient(ClientHandler client) {
         clients.remove(client);
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
@@ -99,5 +135,4 @@ class Room {
     public void setName(String name) {
         this.name = name;
     }
-
 }

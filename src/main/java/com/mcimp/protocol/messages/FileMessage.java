@@ -1,9 +1,5 @@
 package com.mcimp.protocol.messages;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-
 public class FileMessage extends Message {
     private final static MessageType MESSAGE_TYPE = MessageType.File;
 

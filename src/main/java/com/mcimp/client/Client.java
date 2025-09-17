@@ -5,6 +5,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.mcimp.protocol.ProtocolInputStream;
 import com.mcimp.protocol.ProtocolOutputStream;
+import com.mcimp.protocol.commands.JoinCommand;
 import com.mcimp.protocol.messages.SystemMessage;
 import com.mcimp.protocol.packets.AuthPacket;
 import com.mcimp.protocol.packets.AuthType;
@@ -14,9 +15,15 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Client {
     private static final Logger logger = LogManager.getLogger(Client.class);
+    private final ExecutorService pool = Executors.newFixedThreadPool(2);
 
     private String hostname;
     private int port;
@@ -36,8 +43,9 @@ public class Client {
             BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
 
             try (
+
                     ProtocolInputStream input = new ProtocolInputStream(socket.getInputStream());
-                    ProtocolOutputStream output = new ProtocolOutputStream(socket.getOutputStream())) {
+                    ProtocolOutputStream output = new ProtocolOutputStream(socket.getOutputStream());) {
 
                 output.writePacket(new ConnectPacket());
 
@@ -47,13 +55,54 @@ public class Client {
                 System.out.println("Login or register?");
                 System.out.println("1. login");
                 System.out.println("2. register");
+                System.out.print("> ");
 
-                var authType = consoleReader.readLine();
+                var inputAuthType = consoleReader.readLine().trim();
+                AuthType authType;
+                if (inputAuthType.equals("1")) {
+                    authType = AuthType.Login;
+                } else if (inputAuthType.equals("2")) {
+                    authType = AuthType.Register;
+                } else {
+                    throw new RuntimeException("Invalid auth type selected");
+                }
 
-                output.writePacket(new AuthPacket(AuthType.Login, "t", "t"));
+                System.out.print("Username: ");
+                var inputUsername = consoleReader.readLine().trim();
+
+                System.out.print("Password: ");
+                var inputPassword = consoleReader.readLine().trim();
+
+                output.writePacket(new AuthPacket(authType, inputUsername, inputPassword));
+                output.writePacket(new JoinCommand(JoinCommand.DEFAULT_ROOM));
+
+                // Start multiple threads, waiting for
+                var tasks = new ArrayList<Callable<Object>>(2);
 
                 // Handle incoming packets
-                new Thread(new IncomingHandler(input)).start();
+                var incomingHandler = Executors.callable(new IncomingHandler(input));
+                tasks.add(incomingHandler);
+
+                var outgoingHandler = Executors.callable(new OutgoingHandler(output));
+                tasks.add(outgoingHandler);
+
+                pool.invokeAll(tasks);
+            } catch (InterruptedException e) {
+                logger.error("error occoured in pool: ", e);
+            } finally {
+                // Wait for shutdown of pool and handle it acordingly.
+                // See
+                // https://www.baeldung.com/java-executor-wait-for-threads#after-executors-shutdown
+                pool.shutdown();
+
+                try {
+                    if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+                        pool.shutdownNow();
+                    }
+                } catch (InterruptedException ex) {
+                    pool.shutdownNow();
+                    Thread.currentThread().interrupt();
+                }
             }
 
         } catch (SocketTimeoutException e) {
