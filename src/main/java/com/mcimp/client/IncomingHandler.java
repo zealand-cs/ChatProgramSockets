@@ -4,6 +4,8 @@ import java.io.EOFException;
 import java.io.IOException;
 
 import org.apache.logging.log4j.Logger;
+import org.jline.utils.AttributedStringBuilder;
+import org.jline.utils.AttributedStyle;
 import org.apache.logging.log4j.LogManager;
 
 import com.mcimp.protocol.PacketType;
@@ -16,9 +18,11 @@ public class IncomingHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(IncomingHandler.class);
 
     private final ProtocolInputStream stream;
+    private final ClientTerminal terminal;
 
-    public IncomingHandler(ProtocolInputStream stream) {
+    public IncomingHandler(ProtocolInputStream stream, ClientTerminal terminal) {
         this.stream = stream;
+        this.terminal = terminal;
     }
 
     @Override
@@ -57,7 +61,13 @@ public class IncomingHandler implements Runnable {
         switch (message.getMessageType()) {
             case MessageType.System:
                 var systemMessage = (SystemMessage) message;
-                System.out.println("Server: " + systemMessage.getText());
+                AttributedStringBuilder asb = new AttributedStringBuilder();
+                asb.append("Server: ")
+                        .append(systemMessage.getText())
+                        .append("\n")
+                        .style(AttributedStyle.DEFAULT);
+                terminal.write(asb.toAnsi());
+                terminal.flush();
                 break;
             default:
                 logger.warn("unhandled message type: " + message.toString());

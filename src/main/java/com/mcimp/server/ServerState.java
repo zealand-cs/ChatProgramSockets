@@ -3,7 +3,6 @@ package com.mcimp.server;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.SocketImpl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -15,6 +14,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.mcimp.protocol.Packet;
 import com.mcimp.protocol.commands.JoinCommand;
+import com.mcimp.protocol.messages.TextMessage;
 
 class SocketIdentifier {
     private InetAddress address;
@@ -94,6 +94,8 @@ public class ServerState {
     public synchronized void removeClient(SocketIdentifier identifier) {
         var id = clientIds.get(identifier);
         clients.remove(id);
+        var room = getClientRoom(id);
+        room.removeClient(getClient(id));
         roomClients.remove(id);
         clientIds.remove(identifier);
     }
@@ -123,6 +125,15 @@ public class ServerState {
         var room = rooms.get(roomId);
         // TODO: Handle null case
         return room;
+    }
+
+    public synchronized void moveClientToRoom(Socket socket, String roomId) {
+        var identifier = new SocketIdentifier(socket);
+        moveClientToRoom(identifier, roomId);
+    }
+
+    public synchronized void moveClientToRoom(SocketIdentifier identifier, String roomId) {
+        moveClientToRoom(getClientId(identifier), roomId);
     }
 
     public synchronized void moveClientToRoom(Short clientId, String roomId) {
@@ -164,6 +175,10 @@ public class ServerState {
         return clientIds.get(identifier);
     }
 
+    public Room getRoom(String roomId) {
+        return rooms.get(roomId);
+    }
+
     public Map<String, Room> getRooms() {
         return rooms;
     }
@@ -181,9 +196,20 @@ class Room {
         this.clients = new ArrayList<>();
     }
 
-    public void sendPacket(ClientHandler sender, Packet packet) throws IOException {
+    public void broadcastAll(Packet packet) throws IOException {
         for (var client : clients) {
-            // client.getOutput().writePacket(packet);
+            client.getOutputStream().writePacket(packet);
+        }
+    }
+
+    public void broadcast(ClientHandler sender, Packet packet) throws IOException {
+        var text = (TextMessage) packet;
+        for (var client : clients) {
+            if (client == sender) {
+                continue;
+            }
+
+            client.getOutputStream().sendInfoMessage(sender.getUsername() + ": " + text.getText());
         }
     }
 

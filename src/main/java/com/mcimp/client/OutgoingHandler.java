@@ -1,8 +1,6 @@
 package com.mcimp.client;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,25 +8,25 @@ import org.apache.logging.log4j.Logger;
 import com.mcimp.protocol.ProtocolOutputStream;
 import com.mcimp.protocol.commands.JoinCommand;
 import com.mcimp.protocol.messages.TextMessage;
+import com.mcimp.protocol.packets.DisconnectPacket;
 
 public class OutgoingHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(OutgoingHandler.class);
 
     private final ProtocolOutputStream stream;
 
-    public OutgoingHandler(ProtocolOutputStream stream) {
+    private final ClientTerminal terminal;
+
+    public OutgoingHandler(ProtocolOutputStream stream, ClientTerminal terminal) {
         this.stream = stream;
+        this.terminal = terminal;
     }
 
     @Override
     public void run() {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-
         try {
             String line;
-            while ((line = reader.readLine().trim()) != null) {
-                System.out.print("> ");
-
+            while ((line = terminal.readLine().trim()) != null) {
                 if (line.startsWith("/")) {
                     // Substring to remove slash
                     handleCommand(line.substring(1));
@@ -50,6 +48,10 @@ public class OutgoingHandler implements Runnable {
             case "join":
                 var join = new JoinCommand(args[1]);
                 stream.writePacket(join);
+                break;
+            case "quit", "exit":
+                var disconnect = new DisconnectPacket();
+                stream.writePacket(disconnect);
                 break;
             default:
                 logger.warn("unknown command `{}`", args[0]);

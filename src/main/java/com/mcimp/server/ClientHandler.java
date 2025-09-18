@@ -2,6 +2,7 @@ package com.mcimp.server;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -14,6 +15,8 @@ import com.mcimp.protocol.commands.CommandType;
 import com.mcimp.protocol.commands.JoinCommand;
 import com.mcimp.protocol.messages.Message;
 import com.mcimp.protocol.messages.MessageType;
+import com.mcimp.protocol.messages.SystemMessage;
+import com.mcimp.protocol.messages.SystemMessageLevel;
 import com.mcimp.protocol.messages.TextMessage;
 import com.mcimp.protocol.packets.AuthPacket;
 import com.mcimp.protocol.packets.AuthType;
@@ -26,7 +29,10 @@ import org.apache.logging.log4j.Logger;
 public class ClientHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(ClientHandler.class);
 
-    private Socket socket;
+    private final Socket socket;
+    private final ProtocolInputStream input;
+    private final ProtocolOutputStream output;
+
     private ServerState state;
 
     private Set<String> loggedInUsers = ConcurrentHashMap.newKeySet();
@@ -34,8 +40,12 @@ public class ClientHandler implements Runnable {
 
     private String username;
 
-    public ClientHandler(Socket socket, ServerState state, UserRepository repo, Set<String> loggedInUsers) {
+    public ClientHandler(Socket socket, ServerState state, UserRepository repo, Set<String> loggedInUsers)
+            throws IOException {
         this.socket = socket;
+        this.input = new ProtocolInputStream(socket.getInputStream());
+        this.output = new ProtocolOutputStream(socket.getOutputStream());
+
         this.repo = repo;
         this.loggedInUsers = loggedInUsers;
         this.state = state;
@@ -43,10 +53,7 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
-        try (
-                ProtocolInputStream input = new ProtocolInputStream(socket.getInputStream());
-                ProtocolOutputStream output = new ProtocolOutputStream(socket.getOutputStream())) {
-
+        try {
             // Expect a connect packet as the first thing
             Packet connect = input.readPacket();
             assert connect.getType() == PacketType.Connect;
@@ -108,13 +115,17 @@ public class ClientHandler implements Runnable {
                     case PacketType.Connect:
                         logger.warn("connect packet received. Socket already connected!");
                         break;
+                    case PacketType.Disconnect:
+                        state.removeClient(socket);
+                        socket.close();
+                        break;
                     case PacketType.Command:
                         var command = (Command) packet;
-                        handleCommand(command, output);
+                        handleCommand(command);
                         break;
                     case PacketType.Message:
                         var message = (Message) packet;
-                        handleMessage(message, output);
+                        handleMessage(message);
                         break;
                     case PacketType.Connected, PacketType.Disconnected:
                         logger.warn("received packet meant for the client: ", packet.toString());
@@ -125,23 +136,59 @@ public class ClientHandler implements Runnable {
                 }
             }
 
+        } catch (SocketException ex) {
+            logger.info("socket to client closed");
         } catch (IOException e) {
             logger.error("socket io error: ", e);
+        } finally {
+            try {
+                input.close();
+                output.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
-    private void handleCommand(Command command, ProtocolOutputStream output) {
+    private void handleCommand(Command command) {
         try {
             switch (command.getCommandType()) {
                 case CommandType.Join:
                     var join = (JoinCommand) command;
-                    var clientId = state.getClientId(socket);
-                    if (clientId == null) {
-                        System.out.println("client id not found");
+                    var client = state.getClient(socket);
+                    if (client == null) {
+                        logger.error("client not found");
+                        return;
                     }
-                    state.moveClientToRoom(clientId, join.getRoomId());
-                    // Handle exceptions, when added, then send confirmation or error
-                    output.sendInfoMessage("Moved " + clientId + " to Room " + join.getRoomId());
+
+                    var oldRoom = state.getClientRoom(client.getSocket());
+                    if (oldRoom == null) {
+                        logger.error("{} not in a room", client.getUsername());
+                        // Continue so they can join a room
+                    }
+
+                    if (oldRoom.getId().equals(join.getRoomId())) {
+                        output.sendInfoMessage("Already in " + join.getRoomId());
+                        return;
+                    }
+
+                    var newRoom = state.getRoom(join.getRoomId());
+                    if (newRoom == null) {
+                        output.sendInfoMessage(join.getRoomId() + " doesn't exist");
+                        return;
+                    }
+
+                    state.moveClientToRoom(client.getSocket(), join.getRoomId());
+                    // TODO: Handle exceptions, when added, then send confirmation or error
+
+                    logger.info("moved {} from {} to {}", client.getUsername(), oldRoom.getId(), join.getRoomId());
+
+                    if (oldRoom != null) {
+                        oldRoom.broadcastAll(
+                                new SystemMessage(SystemMessageLevel.Info, client.getUsername() + " left the room"));
+                    }
+                    newRoom.broadcastAll(
+                            new SystemMessage(SystemMessageLevel.Info, client.getUsername() + " joined the room"));
                     break;
                 default:
                     logger.error("invalid command packet received: {}", command.toString());
@@ -152,14 +199,21 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void handleMessage(Message message, ProtocolOutputStream output) {
+    private void handleMessage(Message message) {
         switch (message.getMessageType()) {
             case MessageType.Text:
                 var text = (TextMessage) message;
                 var room = state.getClientRoom(socket);
-                // room.sendPacket(sender, text);
 
-                logger.info("someone sent a message to Room {}: {}", room.getId(), text.getText());
+                try {
+                    room.broadcast(this, text);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                var username = state.getClient(socket).username;
+
+                logger.info("{} to {} > {}", username, room.getId(), text.getText());
 
                 // Handle exceptions, when added, then send confirmation or error
                 break;
@@ -171,5 +225,13 @@ public class ClientHandler implements Runnable {
 
     public Socket getSocket() {
         return socket;
+    }
+
+    public ProtocolOutputStream getOutputStream() {
+        return output;
+    }
+
+    public String getUsername() {
+        return username;
     }
 }

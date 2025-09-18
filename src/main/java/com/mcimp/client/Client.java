@@ -1,5 +1,15 @@
 package com.mcimp.client;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -11,16 +21,6 @@ import com.mcimp.protocol.packets.AuthPacket;
 import com.mcimp.protocol.packets.AuthType;
 import com.mcimp.protocol.packets.ConnectPacket;
 
-import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
 public class Client {
     private static final Logger logger = LogManager.getLogger(Client.class);
     private final ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -31,33 +31,33 @@ public class Client {
 
     public String name;
 
+    private ClientTerminal terminal;
+
     public Client(String hostname, int port) {
         this.hostname = hostname;
         this.port = port;
+        this.terminal = new ClientTerminal();
     }
 
     public void start() {
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(hostname, port), timeout);
 
-            BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
-
             try (
-
                     ProtocolInputStream input = new ProtocolInputStream(socket.getInputStream());
                     ProtocolOutputStream output = new ProtocolOutputStream(socket.getOutputStream());) {
 
                 output.writePacket(new ConnectPacket());
 
                 var welcomeMessage = (SystemMessage) input.readPacket();
-                System.out.println(welcomeMessage.getText());
+                terminal.write(welcomeMessage.getText() + "\n");
 
-                System.out.println("Login or register?");
-                System.out.println("1. login");
-                System.out.println("2. register");
-                System.out.print("> ");
+                terminal.write("Login or register?\n");
+                terminal.write("1. login\n");
+                terminal.write("2. register\n");
+                terminal.flush();
 
-                var inputAuthType = consoleReader.readLine().trim();
+                var inputAuthType = terminal.readLine().trim();
                 AuthType authType;
                 if (inputAuthType.equals("1")) {
                     authType = AuthType.Login;
@@ -67,11 +67,8 @@ public class Client {
                     throw new RuntimeException("Invalid auth type selected");
                 }
 
-                System.out.print("Username: ");
-                var inputUsername = consoleReader.readLine().trim();
-
-                System.out.print("Password: ");
-                var inputPassword = consoleReader.readLine().trim();
+                var inputUsername = terminal.readLinePrompt("Username: ").trim();
+                var inputPassword = terminal.readLinePrompt("Password: ").trim();
 
                 output.writePacket(new AuthPacket(authType, inputUsername, inputPassword));
                 output.writePacket(new JoinCommand(JoinCommand.DEFAULT_ROOM));
@@ -80,10 +77,10 @@ public class Client {
                 var tasks = new ArrayList<Callable<Object>>(2);
 
                 // Handle incoming packets
-                var incomingHandler = Executors.callable(new IncomingHandler(input));
+                var incomingHandler = Executors.callable(new IncomingHandler(input, terminal));
                 tasks.add(incomingHandler);
 
-                var outgoingHandler = Executors.callable(new OutgoingHandler(output));
+                var outgoingHandler = Executors.callable(new OutgoingHandler(output, terminal));
                 tasks.add(outgoingHandler);
 
                 pool.invokeAll(tasks);
