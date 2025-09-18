@@ -53,9 +53,8 @@ public class Server {
                 Socket clientSocket = serverSocket.accept();
 
                 var client = new ClientHandler(clientSocket, state, repo, loggedInUsers);
-                var address = clientSocket.getInetAddress();
 
-                state.addClient(address, client);
+                state.addClient(clientSocket, client);
 
                 /*
                  * Creates a new thread to handle clients seperately
