@@ -27,6 +27,8 @@ public class IncomingHandler implements Runnable {
         // When the same catch is in the loop, it will keep on error'ing,
         // very quickly indeed.
         // Ooohhhh how we loooove nesting...
+
+
         try {
             while (true) {
                 try {
@@ -44,9 +46,7 @@ public class IncomingHandler implements Runnable {
                         default:
                             logger.warn("unhandled packet: ", packet.toString());
                     }
-                } catch (EOFException e) {
-                    continue;
-                }
+                } catch (EOFException e) {}
             }
         } catch (IOException e) {
             logger.error("error while reading from server: " + e);

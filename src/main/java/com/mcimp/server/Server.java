@@ -31,7 +31,7 @@ public class Server {
         this.state = new ServerState(new HashMap<>());
     }
 
-    private volatile boolean running = false;
+    private volatile boolean running = true;
 
     public void stop() {
         running = false;
@@ -69,9 +69,8 @@ public class Server {
     }
 
     public static void main(String[] args) throws IOException {
-        Server server = new Server(5, 5555);
-
         repo = new UserRepository("users.json");
+        Server server = new Server(5, 5555);
         server.startServer();
     }
 }
