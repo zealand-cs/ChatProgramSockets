@@ -2,18 +2,62 @@ package com.mcimp.server;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.Socket;
+import java.net.SocketImpl;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.mcimp.protocol.Packet;
 import com.mcimp.protocol.commands.JoinCommand;
 
+class SocketIdentifier {
+    private InetAddress address;
+    private int port;
+
+    public SocketIdentifier(Socket socket) {
+        this.address = socket.getInetAddress();
+        this.port = socket.getPort();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+
+        if (obj.getClass() != this.getClass()) {
+            return false;
+        }
+
+        final var other = (SocketIdentifier) obj;
+
+        if (!address.equals(other.address) || port != other.port) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 53 * hash + address.hashCode();
+        hash = 53 * hash + port;
+        return hash;
+    }
+}
+
 public class ServerState {
+    private static final Logger logger = LogManager.getLogger(ServerState.class);
+
     private short latestClientId = 0;
-    private Map<InetAddress, Short> clientIds;
+    private Map<SocketIdentifier, Short> clientIds;
     private Map<Short, ClientHandler> clients;
 
     private Map<String, Room> rooms;
@@ -31,17 +75,27 @@ public class ServerState {
         createRoom(JoinCommand.DEFAULT_ROOM, "Global");
     }
 
-    public synchronized void addClient(InetAddress address, ClientHandler client) {
-        clientIds.put(address, ++latestClientId);
+    public synchronized void addClient(Socket socket, ClientHandler client) {
+        var identifier = new SocketIdentifier(socket);
+        addClient(identifier, client);
+    }
+
+    public synchronized void addClient(SocketIdentifier identifier, ClientHandler client) {
+        clientIds.put(identifier, ++latestClientId);
         clients.put(latestClientId, client);
         roomClients.put(latestClientId, JoinCommand.DEFAULT_ROOM);
     }
 
-    public synchronized void removeClient(InetAddress address) {
-        var id = clientIds.get(address);
+    public synchronized void removeClient(Socket socket) {
+        var identifier = new SocketIdentifier(socket);
+        removeClient(identifier);
+    }
+
+    public synchronized void removeClient(SocketIdentifier identifier) {
+        var id = clientIds.get(identifier);
         clients.remove(id);
         roomClients.remove(id);
-        clientIds.remove(address);
+        clientIds.remove(identifier);
     }
 
     public synchronized void createRoom(String id, String displayName) {
@@ -52,22 +106,13 @@ public class ServerState {
         rooms.remove(id);
     }
 
-    public synchronized void moveClientToRoom(Short clientId, String roomId) {
-        var client = clients.get(clientId);
-        // TODO: Handle null case
-
-        var newRoom = rooms.get(roomId);
-        // TODO: Handle null case
-
-        var oldRoomId = roomClients.put(clientId, roomId);
-        var room = rooms.get(oldRoomId);
-        // TODO: Handle null case
-        room.removeClient(client);
-        newRoom.addClient(client);
+    public Room getClientRoom(Socket socket) {
+        var identifier = new SocketIdentifier(socket);
+        return getClientRoom(identifier);
     }
 
-    public Room getClientRoom(InetAddress address) {
-        var clientId = getClientId(address);
+    public Room getClientRoom(SocketIdentifier identifier) {
+        var clientId = getClientId(identifier);
         // TODO: Handle null case
         return getClientRoom(clientId);
     }
@@ -80,17 +125,43 @@ public class ServerState {
         return room;
     }
 
+    public synchronized void moveClientToRoom(Short clientId, String roomId) {
+        var client = clients.get(clientId);
+        // TODO: Handle null case
+
+        var newRoom = rooms.get(roomId);
+        // TODO: Handle null case
+
+        var oldRoomId = roomClients.put(clientId, roomId);
+        var room = rooms.get(oldRoomId);
+        if (room != null) {
+            room.removeClient(client);
+        }
+
+        newRoom.addClient(client);
+    }
+
+    public ClientHandler getClient(Socket socket) {
+        var identifier = new SocketIdentifier(socket);
+        return getClient(identifier);
+    }
+
+    public ClientHandler getClient(SocketIdentifier identifier) {
+        var id = clientIds.get(identifier);
+        return getClient(id);
+    }
+
     public ClientHandler getClient(short id) {
         return clients.get(id);
     }
 
-    public ClientHandler getClient(InetAddress address) {
-        var id = clientIds.get(address);
-        return clients.get(id);
+    public Short getClientId(Socket socket) {
+        var identifier = new SocketIdentifier(socket);
+        return getClientId(identifier);
     }
 
-    public Short getClientId(InetAddress address) {
-        return clientIds.get(address);
+    public Short getClientId(SocketIdentifier identifier) {
+        return clientIds.get(identifier);
     }
 
     public Map<String, Room> getRooms() {

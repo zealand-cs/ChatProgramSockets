@@ -134,7 +134,10 @@ public class ClientHandler implements Runnable {
             switch (command.getCommandType()) {
                 case CommandType.Join:
                     var join = (JoinCommand) command;
-                    var clientId = state.getClientId(socket.getInetAddress());
+                    var clientId = state.getClientId(socket);
+                    if (clientId == null) {
+                        System.out.println("client id not found");
+                    }
                     state.moveClientToRoom(clientId, join.getRoomId());
                     // Handle exceptions, when added, then send confirmation or error
                     output.sendInfoMessage("Moved " + clientId + " to Room " + join.getRoomId());
@@ -152,7 +155,7 @@ public class ClientHandler implements Runnable {
         switch (message.getMessageType()) {
             case MessageType.Text:
                 var text = (TextMessage) message;
-                var room = state.getClientRoom(socket.getInetAddress());
+                var room = state.getClientRoom(socket);
                 // room.sendPacket(sender, text);
 
                 logger.info("someone sent a message to Room {}: {}", room.getId(), text.getText());
