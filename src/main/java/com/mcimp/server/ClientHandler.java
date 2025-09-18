@@ -54,7 +54,13 @@ public class ClientHandler implements Runnable {
 
             logger.info("connection established successfully");
 
-            output.sendInfoMessage("Welcome to the server!\nLogin with `/login` or `/register`!");
+            var welcome = new StringBuilder()
+                    .append("Welcome to the server!\n")
+                    .append("Login with `/login` or `/register`\n")
+                    .append("Joined room ")
+                    .append(JoinCommand.DEFAULT_ROOM);
+
+            output.sendInfoMessage(welcome.toString());
 
             while (true) {
                 var packet = input.readPacket();
@@ -126,12 +132,12 @@ public class ClientHandler implements Runnable {
 
                 logger.info("{} authenticated successfully", authPacket.getUsername());
 
-                var builder = new StringBuilder("To begin chatting with someone, `/join` a room!\n");
-                for (var room : state.getRooms().values()) {
-                    builder.append(room.getId() + " - " + room.getName());
-                }
+                var successMessage = new StringBuilder()
+                        .append("Successfully authenticated!\n")
+                        .append("Type `/help` to see your possibilities");
 
-                output.sendInfoMessage(builder.toString());
+                output.sendInfoMessage(successMessage.toString());
+
                 logger.info("sending login info packet");
                 break;
             case PacketType.Command:
@@ -175,7 +181,7 @@ public class ClientHandler implements Runnable {
 
                     state.moveClientToRoom(socket, newRoom.get());
 
-                    logger.info("moved {} from {} to {}", username, oldRoom.getId(), join.getRoomId());
+                    logger.info("[{}] {} > [{}] {}", oldRoom.getId(), username, join.getRoomId(), username);
 
                     oldRoom.broadcastAll(new SystemMessage(SystemMessageLevel.Info, username + " left the room"));
 
@@ -204,9 +210,7 @@ public class ClientHandler implements Runnable {
                 }
 
                 var client = state.getClient(socket);
-                logger.info("{} to {} > {}", client.getUsername(), room.getId(), text.getText());
-
-                // Handle exceptions, when added, then send confirmation or error
+                logger.info("[{}] {}: {}", room.getId(), client.getUsername(), text.getText());
                 break;
             default:
                 logger.error("invalid message packet received: {}", message.toString());

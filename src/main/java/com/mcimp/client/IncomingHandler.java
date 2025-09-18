@@ -32,7 +32,6 @@ public class IncomingHandler implements Runnable {
         // very quickly indeed.
         // Ooohhhh how we loooove nesting...
 
-
         try {
             while (true) {
                 try {
@@ -50,7 +49,8 @@ public class IncomingHandler implements Runnable {
                         default:
                             logger.warn("unhandled packet: ", packet.toString());
                     }
-                } catch (EOFException e) {}
+                } catch (EOFException e) {
+                }
             }
         } catch (IOException e) {
             logger.error("error while reading from server: " + e);
@@ -62,8 +62,7 @@ public class IncomingHandler implements Runnable {
             case MessageType.System:
                 var systemMessage = (SystemMessage) message;
                 AttributedStringBuilder asb = new AttributedStringBuilder();
-                asb.append("Server: ")
-                        .append(systemMessage.getText())
+                asb.append(systemMessage.getText())
                         .append("\n")
                         .style(AttributedStyle.DEFAULT);
                 terminal.write(asb.toAnsi());

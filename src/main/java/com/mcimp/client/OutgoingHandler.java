@@ -59,7 +59,6 @@ public class OutgoingHandler implements Runnable {
                 }
                 var loginAuth = new AuthPacket(AuthType.Login, args[1], args[2]);
                 stream.writePacket(loginAuth);
-                stream.writePacket(new JoinCommand(JoinCommand.DEFAULT_ROOM));
                 break;
             case "register":
                 if (args.length != 3 || args[1] == null || args[2] == null) {
@@ -69,7 +68,6 @@ public class OutgoingHandler implements Runnable {
                 }
                 var registerAuth = new AuthPacket(AuthType.Register, args[1], args[2]);
                 stream.writePacket(registerAuth);
-                stream.writePacket(new JoinCommand(JoinCommand.DEFAULT_ROOM));
                 break;
             case "quit", "exit":
                 var disconnect = new DisconnectPacket();

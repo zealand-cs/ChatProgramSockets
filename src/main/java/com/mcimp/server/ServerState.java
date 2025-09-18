@@ -142,7 +142,8 @@ class Room {
                 continue;
             }
 
-            client.getOutputStream().sendInfoMessage(sender.getUsername() + ": " + text.getText());
+            client.getOutputStream()
+                    .sendInfoMessage("[" + getName() + "] " + sender.getUsername() + ": " + text.getText());
         }
     }
 
