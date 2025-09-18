@@ -5,16 +5,16 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 
-public class EmojiReplace {
+public class EmojiReplacer {
     private HashMap<String, String> emojiLookup;
 
-    public EmojiReplace(String file) {
+    public EmojiReplacer(String file) {
         emojiLookup = new HashMap<>();
 
-        // String emojiLookupPath = this.getClass().getClassLoader().getResourceAsStream("/emojiLookup.csv");
+        var filePath = this.getClass().getResource(file).getPath();
 
         try {
-            Files.lines(Paths.get(file)).forEach(v -> {
+            Files.lines(Paths.get(filePath)).forEach(v -> {
                 var seperated = v.split(";");
                 emojiLookup.put(seperated[0], seperated[1]);
             });

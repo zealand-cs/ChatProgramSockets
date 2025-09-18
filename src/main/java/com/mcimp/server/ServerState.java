@@ -15,6 +15,7 @@ import com.mcimp.protocol.commands.JoinCommand;
 import com.mcimp.protocol.messages.TextMessage;
 import com.mcimp.repository.UserRepository;
 import com.mcimp.utils.BiMap;
+import com.mcimp.utils.EmojiReplacer;
 import com.mcimp.utils.HashBiMap;
 import com.mcimp.utils.SynchronizedBiMap;
 
@@ -118,6 +119,8 @@ public class ServerState {
 }
 
 class Room {
+    private static final EmojiReplacer replacer = new EmojiReplacer("emojiLookup.csv");
+
     private String id;
     private String name;
 
@@ -142,8 +145,10 @@ class Room {
                 continue;
             }
 
+            var replaced = replacer.replaceEmojis(text.getText());
+
             client.getOutputStream()
-                    .sendInfoMessage("[" + getName() + "] " + sender.getUsername() + ": " + text.getText());
+                    .sendInfoMessage("[" + getName() + "] " + sender.getUsername() + ": " + replaced);
         }
     }
 
