@@ -16,54 +16,18 @@ import com.mcimp.protocol.Packet;
 import com.mcimp.protocol.commands.JoinCommand;
 import com.mcimp.protocol.messages.TextMessage;
 
-class SocketIdentifier {
-    private InetAddress address;
-    private int port;
-
-    public SocketIdentifier(Socket socket) {
-        this.address = socket.getInetAddress();
-        this.port = socket.getPort();
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-
-        if (obj.getClass() != this.getClass()) {
-            return false;
-        }
-
-        final var other = (SocketIdentifier) obj;
-
-        if (!address.equals(other.address) || port != other.port) {
-            return false;
-        }
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 3;
-        hash = 53 * hash + address.hashCode();
-        hash = 53 * hash + port;
-        return hash;
-    }
-}
-
 public class ServerState {
     private static final Logger logger = LogManager.getLogger(ServerState.class);
 
     private short latestClientId = 0;
-    private Map<SocketIdentifier, Short> clientIds;
+    private Map<Socket, Short> clientIds;
     private Map<Short, ClientHandler> clients;
 
     private Map<String, Room> rooms;
 
     // Mapping of client ids to room ids
-    private Map<Short, String> roomClients;
+    private Map<Short, Room> roomClients;
+    private Room defaultRoom;
 
     public ServerState(Map<InetAddress, ClientHandler> clients) {
         this.clientIds = Collections.synchronizedMap(new HashMap<>());
@@ -72,36 +36,28 @@ public class ServerState {
         this.rooms = Collections.synchronizedMap(new HashMap<>());
         this.roomClients = Collections.synchronizedMap(new HashMap<>());
 
-        createRoom(JoinCommand.DEFAULT_ROOM, "Global");
+        this.defaultRoom = createRoom(JoinCommand.DEFAULT_ROOM, "Global");
     }
 
     public synchronized void addClient(Socket socket, ClientHandler client) {
-        var identifier = new SocketIdentifier(socket);
-        addClient(identifier, client);
-    }
-
-    public synchronized void addClient(SocketIdentifier identifier, ClientHandler client) {
-        clientIds.put(identifier, ++latestClientId);
+        clientIds.put(socket, ++latestClientId);
         clients.put(latestClientId, client);
-        roomClients.put(latestClientId, JoinCommand.DEFAULT_ROOM);
+        roomClients.put(latestClientId, defaultRoom);
+        defaultRoom.addClient(client);
     }
 
     public synchronized void removeClient(Socket socket) {
-        var identifier = new SocketIdentifier(socket);
-        removeClient(identifier);
-    }
-
-    public synchronized void removeClient(SocketIdentifier identifier) {
-        var id = clientIds.get(identifier);
-        clients.remove(id);
+        var id = clientIds.remove(socket);
+        var client = clients.remove(id);
         var room = getClientRoom(id);
-        room.removeClient(getClient(id));
+        room.removeClient(client);
         roomClients.remove(id);
-        clientIds.remove(identifier);
     }
 
-    public synchronized void createRoom(String id, String displayName) {
-        rooms.put(id, new Room(id, displayName));
+    public synchronized Room createRoom(String id, String displayName) {
+        var room = new Room(id, displayName);
+        rooms.put(id, room);
+        return room;
     }
 
     public synchronized void removeRoom(String id) {
@@ -109,31 +65,17 @@ public class ServerState {
     }
 
     public Room getClientRoom(Socket socket) {
-        var identifier = new SocketIdentifier(socket);
-        return getClientRoom(identifier);
-    }
-
-    public Room getClientRoom(SocketIdentifier identifier) {
-        var clientId = getClientId(identifier);
-        // TODO: Handle null case
-        return getClientRoom(clientId);
+        return getClientRoom(getClientId(socket));
     }
 
     public Room getClientRoom(Short clientId) {
-        var roomId = roomClients.get(clientId);
-        // TODO: Handle null case
-        var room = rooms.get(roomId);
+        var room = roomClients.get(clientId);
         // TODO: Handle null case
         return room;
     }
 
     public synchronized void moveClientToRoom(Socket socket, String roomId) {
-        var identifier = new SocketIdentifier(socket);
-        moveClientToRoom(identifier, roomId);
-    }
-
-    public synchronized void moveClientToRoom(SocketIdentifier identifier, String roomId) {
-        moveClientToRoom(getClientId(identifier), roomId);
+        moveClientToRoom(getClientId(socket), roomId);
     }
 
     public synchronized void moveClientToRoom(Short clientId, String roomId) {
@@ -143,22 +85,16 @@ public class ServerState {
         var newRoom = rooms.get(roomId);
         // TODO: Handle null case
 
-        var oldRoomId = roomClients.put(clientId, roomId);
-        var room = rooms.get(oldRoomId);
-        if (room != null) {
-            room.removeClient(client);
+        var oldRoom = roomClients.put(clientId, newRoom);
+        if (oldRoom != null) {
+            oldRoom.removeClient(client);
         }
 
         newRoom.addClient(client);
     }
 
     public ClientHandler getClient(Socket socket) {
-        var identifier = new SocketIdentifier(socket);
-        return getClient(identifier);
-    }
-
-    public ClientHandler getClient(SocketIdentifier identifier) {
-        var id = clientIds.get(identifier);
+        var id = clientIds.get(socket);
         return getClient(id);
     }
 
@@ -167,12 +103,7 @@ public class ServerState {
     }
 
     public Short getClientId(Socket socket) {
-        var identifier = new SocketIdentifier(socket);
-        return getClientId(identifier);
-    }
-
-    public Short getClientId(SocketIdentifier identifier) {
-        return clientIds.get(identifier);
+        return clientIds.get(socket);
     }
 
     public Room getRoom(String roomId) {
