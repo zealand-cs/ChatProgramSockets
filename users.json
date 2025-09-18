@@ -1,0 +1,24 @@
+{
+  "users": [
+    {
+      "username": "test",
+      "password": "187c42250d417e4b4804b79d45d4ab70add9e8795533b58f18d26886985ccd7e"
+    },
+    {
+      "username": "pizzaman",
+      "password": "1c45f6c7abc8cb3d379ed1cad8344a40aa4a5e8a2f615a480580160b33d0fd33"
+    },
+    {
+      "username": "t",
+      "password": "e3b98a4da31a127d4bde6e43033f66ba274cab0eb7eb1c70ec41402bf6273dd8"
+    },
+    {
+      "username": "will",
+      "password": "5899575803417e3356a133c51efff8314c0d3d7a52f37472f90b1dce5288525b"
+    },
+    {
+      "username": "mcimp",
+      "password": "187c42250d417e4b4804b79d45d4ab70add9e8795533b58f18d26886985ccd7e"
+    }
+  ]
+}
