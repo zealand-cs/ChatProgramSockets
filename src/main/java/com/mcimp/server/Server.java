@@ -28,7 +28,7 @@ public class Server {
         pool = Executors.newFixedThreadPool(threads);
 
         this.port = port;
-        this.state = new ServerState(new HashMap<>());
+        this.state = new ServerState(repo);
     }
 
     private volatile boolean running = true;
@@ -52,7 +52,7 @@ public class Server {
             while (running) {
                 Socket clientSocket = serverSocket.accept();
 
-                var client = new ClientHandler(clientSocket, state, repo, loggedInUsers);
+                var client = new ClientHandler(clientSocket, state);
 
                 state.addClient(clientSocket, client);
 

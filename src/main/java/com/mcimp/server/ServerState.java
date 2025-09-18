@@ -10,49 +10,66 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.mcimp.protocol.Packet;
 import com.mcimp.protocol.commands.JoinCommand;
 import com.mcimp.protocol.messages.TextMessage;
+import com.mcimp.repository.UserRepository;
+import com.mcimp.utils.BiMap;
+import com.mcimp.utils.HashBiMap;
+import com.mcimp.utils.SynchronizedBiMap;
 
 public class ServerState {
-    private static final Logger logger = LogManager.getLogger(ServerState.class);
+    private Map<Socket, ClientHandler> clients;
 
-    private short latestClientId = 0;
-    private Map<Socket, Short> clientIds;
-    private Map<Short, ClientHandler> clients;
+    private BiMap<Socket, String> authenticatedUsers;
+    private UserRepository userRepository;
 
-    private Map<String, Room> rooms;
-
-    // Mapping of client ids to room ids
-    private Map<Short, Room> roomClients;
     private Room defaultRoom;
+    private Map<String, Room> rooms;
+    private Map<Socket, Room> roomClients;
 
-    public ServerState(Map<InetAddress, ClientHandler> clients) {
-        this.clientIds = Collections.synchronizedMap(new HashMap<>());
+    public ServerState(UserRepository userRepository) {
         this.clients = Collections.synchronizedMap(new HashMap<>());
+
+        this.authenticatedUsers = new SynchronizedBiMap<>(new HashBiMap<>());
+        this.userRepository = userRepository;
 
         this.rooms = Collections.synchronizedMap(new HashMap<>());
         this.roomClients = Collections.synchronizedMap(new HashMap<>());
-
         this.defaultRoom = createRoom(JoinCommand.DEFAULT_ROOM, "Global");
     }
 
     public synchronized void addClient(Socket socket, ClientHandler client) {
-        clientIds.put(socket, ++latestClientId);
-        clients.put(latestClientId, client);
-        roomClients.put(latestClientId, defaultRoom);
+        clients.put(socket, client);
+        roomClients.put(socket, defaultRoom);
         defaultRoom.addClient(client);
     }
 
     public synchronized void removeClient(Socket socket) {
-        var id = clientIds.remove(socket);
-        var client = clients.remove(id);
-        var room = getClientRoom(id);
+        var client = clients.remove(socket);
+        var room = getClientRoom(socket);
         room.removeClient(client);
-        roomClients.remove(id);
+        roomClients.remove(socket);
+    }
+
+    public synchronized boolean authenticate(String username, String password) {
+        return userRepository.authenticate(username, password);
+    }
+
+    public synchronized boolean userExists(String username) {
+        return userRepository.userExists(username);
+    }
+
+    public synchronized void addAuthSession(String username, String password) throws IOException {
+        userRepository.addUser(username, password);
+    }
+
+    public synchronized boolean isAuthenticated(Socket socket) {
+        return authenticatedUsers.get(socket) != null;
+    }
+
+    public synchronized void loginUser(Socket socket, String username) {
+        authenticatedUsers.put(socket, username);
     }
 
     public synchronized Room createRoom(String id, String displayName) {
@@ -66,26 +83,14 @@ public class ServerState {
     }
 
     public Room getClientRoom(Socket socket) {
-        return getClientRoom(getClientId(socket));
-    }
-
-    public Room getClientRoom(Short clientId) {
-        var room = roomClients.get(clientId);
+        var room = roomClients.get(socket);
         return room;
     }
 
-    public synchronized void moveClientToRoom(Socket socket, String roomId) {
-        moveClientToRoom(getClientId(socket), roomId);
-    }
+    public synchronized void moveClientToRoom(Socket socket, Room newRoom) {
+        var client = getClient(socket);
 
-    public synchronized void moveClientToRoom(Short clientId, String roomId) {
-        var client = clients.get(clientId);
-        // TODO: Handle null case
-
-        var newRoom = rooms.get(roomId);
-        // TODO: Handle null case
-
-        var oldRoom = roomClients.put(clientId, newRoom);
+        var oldRoom = roomClients.put(socket, newRoom);
         if (oldRoom != null) {
             oldRoom.removeClient(client);
         }
@@ -93,17 +98,14 @@ public class ServerState {
         newRoom.addClient(client);
     }
 
-    public Optional<ClientHandler> getClient(Socket socket) {
-        var id = clientIds.get(socket);
-        return getClient(id);
-    }
-
-    public Optional<ClientHandler> getClient(short id) {
-        return Optional.ofNullable(clients.get(id));
-    }
-
-    public Short getClientId(Socket socket) {
-        return clientIds.get(socket);
+    public ClientHandler getClient(Socket socket) {
+        var client = clients.get(socket);
+        if (client == null) {
+            // Crashing since this is an unrecoverable state.
+            // It should not even be possible in the first place.
+            throw new RuntimeException("socket without corresponding client");
+        }
+        return client;
     }
 
     public Optional<Room> getRoom(String roomId) {

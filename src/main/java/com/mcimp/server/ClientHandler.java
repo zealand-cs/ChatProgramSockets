@@ -3,8 +3,6 @@ package com.mcimp.server;
 import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import com.mcimp.protocol.Packet;
 import com.mcimp.protocol.PacketType;
@@ -20,7 +18,6 @@ import com.mcimp.protocol.messages.SystemMessageLevel;
 import com.mcimp.protocol.messages.TextMessage;
 import com.mcimp.protocol.packets.AuthPacket;
 import com.mcimp.protocol.packets.AuthType;
-import com.mcimp.repository.UserRepository;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,19 +31,12 @@ public class ClientHandler implements Runnable {
 
     private ServerState state;
 
-    private Set<String> loggedInUsers = ConcurrentHashMap.newKeySet();
-    private UserRepository repo;
-
     private String username;
 
-    public ClientHandler(Socket socket, ServerState state, UserRepository repo, Set<String> loggedInUsers)
-            throws IOException {
+    public ClientHandler(Socket socket, ServerState state) throws IOException {
         this.socket = socket;
         this.input = new ProtocolInputStream(socket.getInputStream());
         this.output = new ProtocolOutputStream(socket.getOutputStream());
-
-        this.repo = repo;
-        this.loggedInUsers = loggedInUsers;
         this.state = state;
     }
 
@@ -64,75 +54,11 @@ public class ClientHandler implements Runnable {
 
             logger.info("connection established successfully");
 
-            output.sendInfoMessage("Welcome to the server!");
-
-            var authPacket = (AuthPacket) input.readPacket();
-            assert authPacket.getType() == PacketType.Auth;
-
-            if (authPacket.getAuthType() == AuthType.Login) {
-                if (!repo.userExists(authPacket.getUsername())) {
-                    logger.warn(authPacket.getUsername() + " doesn't exist");
-                    output.sendInfoMessage("Invalid credentials.");
-                    socket.close();
-                    return;
-                }
-
-                var authenticated = repo.authenticate(authPacket.getUsername(), authPacket.getPassword());
-
-                if (!authenticated) {
-                    logger.warn(authPacket.getUsername() + " logged in with wrong password");
-                    output.sendInfoMessage("Invalid credentials.");
-                    socket.close();
-                    return;
-                }
-            } else {
-                if (repo.userExists(authPacket.getUsername())) {
-                    logger.warn(authPacket.getUsername() + " tried to register with existing user");
-                    output.sendInfoMessage("User already exists.");
-                    socket.close();
-                    return;
-                }
-
-                repo.addUser(authPacket.getUsername(), authPacket.getPassword());
-            }
-
-            username = authPacket.getUsername();
-            loggedInUsers.add(authPacket.getUsername());
-            logger.info("{} logged in successfully", authPacket.getUsername());
-
-            var builder = new StringBuilder("To begin chatting with someone, `/join` a room!\n");
-            for (var room : state.getRooms().values()) {
-                builder.append(room.getId() + " - " + room.getName());
-            }
-
-            output.sendInfoMessage(builder.toString());
-            logger.info("sending info packet");
+            output.sendInfoMessage("Welcome to the server!\nLogin with `/login` or `/register`!");
 
             while (true) {
                 var packet = input.readPacket();
-                switch (packet.getType()) {
-                    case PacketType.Connect:
-                        logger.warn("connect packet received. Socket already connected!");
-                        break;
-                    case PacketType.Disconnect:
-                        state.removeClient(socket);
-                        socket.close();
-                        break;
-                    case PacketType.Command:
-                        var command = (Command) packet;
-                        handleCommand(command);
-                        break;
-                    case PacketType.Message:
-                        var message = (Message) packet;
-                        handleMessage(message);
-                        break;
-                    case PacketType.Connected, PacketType.Disconnected:
-                        logger.warn("received packet meant for the client: ", packet.toString());
-                        break;
-                    default:
-                        logger.warn("unhandled packet: ", packet.toString());
-                        break;
-                }
+                handlePacket(packet);
             }
 
         } catch (SocketException ex) {
@@ -149,19 +75,91 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    private void handlePacket(Packet packet) throws IOException {
+        if (!state.isAuthenticated(socket) && packet.getType() != PacketType.Auth) {
+            output.sendInfoMessage("Login with either `/login` or `/register` to do anything");
+            return;
+        }
+
+        switch (packet.getType()) {
+            case PacketType.Connect:
+                logger.warn("connect packet received. Socket already connected!");
+                break;
+            case PacketType.Disconnect:
+                state.removeClient(socket);
+                socket.close();
+                break;
+            case PacketType.Auth:
+                if (state.isAuthenticated(socket)) {
+                    output.sendInfoMessage("You're already authenticated");
+                    return;
+                }
+                var authPacket = (AuthPacket) packet;
+
+                if (authPacket.getAuthType() == AuthType.Login) {
+                    if (!state.userExists(authPacket.getUsername())) {
+                        logger.warn(authPacket.getUsername() + " doesn't exist");
+                        output.sendInfoMessage("Invalid credentials.");
+                        return;
+                    }
+
+                    var authenticated = state.authenticate(authPacket.getUsername(), authPacket.getPassword());
+
+                    if (!authenticated) {
+                        logger.warn(authPacket.getUsername() + " logged in with wrong password");
+                        output.sendInfoMessage("Invalid credentials.");
+                        return;
+                    }
+                } else {
+                    if (state.userExists(authPacket.getUsername())) {
+                        logger.warn(authPacket.getUsername() + " tried to register with existing user");
+                        output.sendInfoMessage("User already exists.");
+                        return;
+                    }
+
+                    state.addAuthSession(authPacket.getUsername(), authPacket.getPassword());
+                }
+                username = authPacket.getUsername();
+
+                username = authPacket.getUsername();
+                state.loginUser(socket, authPacket.getUsername());
+
+                logger.info("{} authenticated successfully", authPacket.getUsername());
+
+                var builder = new StringBuilder("To begin chatting with someone, `/join` a room!\n");
+                for (var room : state.getRooms().values()) {
+                    builder.append(room.getId() + " - " + room.getName());
+                }
+
+                output.sendInfoMessage(builder.toString());
+                logger.info("sending login info packet");
+                break;
+            case PacketType.Command:
+                var command = (Command) packet;
+                handleCommand(command);
+                break;
+            case PacketType.Message:
+                var message = (Message) packet;
+                handleMessage(message);
+                break;
+            case PacketType.Connected, PacketType.Disconnected:
+                logger.warn("received packet meant for the client: ", packet.toString());
+                break;
+            default:
+                logger.warn("unhandled packet: ", packet.toString());
+                break;
+        }
+    }
+
     private void handleCommand(Command command) {
         try {
             switch (command.getCommandType()) {
                 case CommandType.Join:
                     var join = (JoinCommand) command;
                     var client = state.getClient(socket);
-                    if (client.isEmpty()) {
-                        logger.error("client not found");
-                        return;
-                    }
 
-                    var username = client.get().getUsername();
-                    var socket = client.get().getSocket();
+                    var username = client.getUsername();
+                    var socket = client.getSocket();
 
                     var oldRoom = state.getClientRoom(socket);
                     if (oldRoom.getId().equals(join.getRoomId())) {
@@ -175,8 +173,7 @@ public class ClientHandler implements Runnable {
                         return;
                     }
 
-                    // TODO: Handle exceptions, when added, then send confirmation or error
-                    state.moveClientToRoom(socket, join.getRoomId());
+                    state.moveClientToRoom(socket, newRoom.get());
 
                     logger.info("moved {} from {} to {}", username, oldRoom.getId(), join.getRoomId());
 
@@ -207,9 +204,7 @@ public class ClientHandler implements Runnable {
                 }
 
                 var client = state.getClient(socket);
-                var username = client.get().username;
-
-                logger.info("{} to {} > {}", username, room.getId(), text.getText());
+                logger.info("{} to {} > {}", client.getUsername(), room.getId(), text.getText());
 
                 // Handle exceptions, when added, then send confirmation or error
                 break;

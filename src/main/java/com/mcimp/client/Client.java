@@ -51,27 +51,7 @@ public class Client {
 
                 var welcomeMessage = (SystemMessage) input.readPacket();
                 terminal.write(welcomeMessage.getText() + "\n");
-
-                terminal.write("Login or register?\n");
-                terminal.write("1. login\n");
-                terminal.write("2. register\n");
                 terminal.flush();
-
-                var inputAuthType = terminal.readLine().trim();
-                AuthType authType;
-                if (inputAuthType.equals("1")) {
-                    authType = AuthType.Login;
-                } else if (inputAuthType.equals("2")) {
-                    authType = AuthType.Register;
-                } else {
-                    throw new RuntimeException("Invalid auth type selected");
-                }
-
-                var inputUsername = terminal.readLinePrompt("Username: ").trim();
-                var inputPassword = terminal.readLinePrompt("Password: ").trim();
-
-                output.writePacket(new AuthPacket(authType, inputUsername, inputPassword));
-                output.writePacket(new JoinCommand(JoinCommand.DEFAULT_ROOM));
 
                 // Start multiple threads, waiting for
                 var tasks = new ArrayList<Callable<Object>>(2);
@@ -84,6 +64,7 @@ public class Client {
                 tasks.add(outgoingHandler);
 
                 pool.invokeAll(tasks);
+                // TODO: Handle exceptions, when added, then send confirmation or error
             } catch (InterruptedException e) {
                 logger.error("error occoured in pool: ", e);
             } finally {

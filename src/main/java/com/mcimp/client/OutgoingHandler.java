@@ -8,6 +8,8 @@ import org.apache.logging.log4j.Logger;
 import com.mcimp.protocol.ProtocolOutputStream;
 import com.mcimp.protocol.commands.JoinCommand;
 import com.mcimp.protocol.messages.TextMessage;
+import com.mcimp.protocol.packets.AuthPacket;
+import com.mcimp.protocol.packets.AuthType;
 import com.mcimp.protocol.packets.DisconnectPacket;
 
 public class OutgoingHandler implements Runnable {
@@ -48,6 +50,26 @@ public class OutgoingHandler implements Runnable {
             case "join":
                 var join = new JoinCommand(args[1]);
                 stream.writePacket(join);
+                break;
+            case "login":
+                if (args.length != 3 || args[1] == null || args[2] == null) {
+                    terminal.writeln("Usage: /login <username> <password>");
+                    terminal.flush();
+                    return;
+                }
+                var loginAuth = new AuthPacket(AuthType.Login, args[1], args[2]);
+                stream.writePacket(loginAuth);
+                stream.writePacket(new JoinCommand(JoinCommand.DEFAULT_ROOM));
+                break;
+            case "register":
+                if (args.length != 3 || args[1] == null || args[2] == null) {
+                    terminal.writeln("Usage: /register <username> <password>");
+                    terminal.flush();
+                    return;
+                }
+                var registerAuth = new AuthPacket(AuthType.Register, args[1], args[2]);
+                stream.writePacket(registerAuth);
+                stream.writePacket(new JoinCommand(JoinCommand.DEFAULT_ROOM));
                 break;
             case "quit", "exit":
                 var disconnect = new DisconnectPacket();
