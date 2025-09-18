@@ -25,7 +25,6 @@ import com.mcimp.repository.UserRepository;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-
 public class ClientHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(ClientHandler.class);
 
@@ -156,39 +155,35 @@ public class ClientHandler implements Runnable {
                 case CommandType.Join:
                     var join = (JoinCommand) command;
                     var client = state.getClient(socket);
-                    if (client == null) {
+                    if (client.isEmpty()) {
                         logger.error("client not found");
                         return;
                     }
 
-                    var oldRoom = state.getClientRoom(client.getSocket());
-                    if (oldRoom == null) {
-                        logger.error("{} not in a room", client.getUsername());
-                        // Continue so they can join a room
-                    }
+                    var username = client.get().getUsername();
+                    var socket = client.get().getSocket();
 
+                    var oldRoom = state.getClientRoom(socket);
                     if (oldRoom.getId().equals(join.getRoomId())) {
                         output.sendInfoMessage("Already in " + join.getRoomId());
                         return;
                     }
 
                     var newRoom = state.getRoom(join.getRoomId());
-                    if (newRoom == null) {
+                    if (newRoom.isEmpty()) {
                         output.sendInfoMessage(join.getRoomId() + " doesn't exist");
                         return;
                     }
 
-                    state.moveClientToRoom(client.getSocket(), join.getRoomId());
                     // TODO: Handle exceptions, when added, then send confirmation or error
+                    state.moveClientToRoom(socket, join.getRoomId());
 
-                    logger.info("moved {} from {} to {}", client.getUsername(), oldRoom.getId(), join.getRoomId());
+                    logger.info("moved {} from {} to {}", username, oldRoom.getId(), join.getRoomId());
 
-                    if (oldRoom != null) {
-                        oldRoom.broadcastAll(
-                                new SystemMessage(SystemMessageLevel.Info, client.getUsername() + " left the room"));
-                    }
-                    newRoom.broadcastAll(
-                            new SystemMessage(SystemMessageLevel.Info, client.getUsername() + " joined the room"));
+                    oldRoom.broadcastAll(new SystemMessage(SystemMessageLevel.Info, username + " left the room"));
+
+                    newRoom.get()
+                            .broadcastAll(new SystemMessage(SystemMessageLevel.Info, username + " joined the room"));
                     break;
                 default:
                     logger.error("invalid command packet received: {}", command.toString());
@@ -211,7 +206,8 @@ public class ClientHandler implements Runnable {
                     e.printStackTrace();
                 }
 
-                var username = state.getClient(socket).username;
+                var client = state.getClient(socket);
+                var username = client.get().username;
 
                 logger.info("{} to {} > {}", username, room.getId(), text.getText());
 

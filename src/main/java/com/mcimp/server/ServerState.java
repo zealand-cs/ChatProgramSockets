@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -70,7 +71,6 @@ public class ServerState {
 
     public Room getClientRoom(Short clientId) {
         var room = roomClients.get(clientId);
-        // TODO: Handle null case
         return room;
     }
 
@@ -93,21 +93,21 @@ public class ServerState {
         newRoom.addClient(client);
     }
 
-    public ClientHandler getClient(Socket socket) {
+    public Optional<ClientHandler> getClient(Socket socket) {
         var id = clientIds.get(socket);
         return getClient(id);
     }
 
-    public ClientHandler getClient(short id) {
-        return clients.get(id);
+    public Optional<ClientHandler> getClient(short id) {
+        return Optional.ofNullable(clients.get(id));
     }
 
     public Short getClientId(Socket socket) {
         return clientIds.get(socket);
     }
 
-    public Room getRoom(String roomId) {
-        return rooms.get(roomId);
+    public Optional<Room> getRoom(String roomId) {
+        return Optional.ofNullable(rooms.get(roomId));
     }
 
     public Map<String, Room> getRooms() {
