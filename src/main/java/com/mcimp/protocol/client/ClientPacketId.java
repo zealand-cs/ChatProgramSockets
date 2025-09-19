@@ -19,10 +19,12 @@ public enum ClientPacketId {
             case Connect -> Packets.CLIENT_CONNECT;
             case Disconnect -> Packets.CLIENT_DISCONNECT;
             case Authenticate -> Packets.CLIENT_AUTHENTICATE;
+
             case JoinRoom -> Packets.CLIENT_JOIN_ROOM;
             case RoomDetails -> Packets.CLIENT_ROOM_DETAILS;
             case ListRooms -> Packets.CLIENT_LIST_ROOMS;
             case ListUsers -> Packets.CLIENT_LIST_USERS;
+
             case Message -> Packets.CLIENT_SEND_MESSAGE;
         };
     }
@@ -32,11 +34,12 @@ public enum ClientPacketId {
             case Packets.CLIENT_CONNECT -> Connect;
             case Packets.CLIENT_DISCONNECT -> Disconnect;
             case Packets.CLIENT_AUTHENTICATE -> Authenticate;
+
+            case Packets.CLIENT_JOIN_ROOM -> JoinRoom;
             case Packets.CLIENT_ROOM_DETAILS -> RoomDetails;
             case Packets.CLIENT_LIST_ROOMS -> ListRooms;
             case Packets.CLIENT_LIST_USERS -> ListUsers;
 
-            case Packets.CLIENT_JOIN_ROOM -> JoinRoom;
             case Packets.CLIENT_SEND_MESSAGE -> Message;
             default -> throw new RuntimeException("invalid client packet id");
         };

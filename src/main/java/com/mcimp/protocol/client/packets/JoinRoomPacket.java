@@ -8,12 +8,12 @@ import com.mcimp.protocol.client.ClientPacket;
 import com.mcimp.protocol.client.ClientPacketId;
 
 public class JoinRoomPacket extends ClientPacket {
-    private final static ClientPacketId PACKET_TYPE = ClientPacketId.JoinRoom;
+    private final static ClientPacketId PACKET_ID = ClientPacketId.JoinRoom;
 
     private String roomId;
 
     public JoinRoomPacket(String roomId) {
-        super(PACKET_TYPE);
+        super(PACKET_ID);
         this.roomId = roomId;
     }
 

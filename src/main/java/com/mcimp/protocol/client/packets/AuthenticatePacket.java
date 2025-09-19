@@ -8,14 +8,14 @@ import com.mcimp.protocol.client.ClientPacket;
 import com.mcimp.protocol.client.ClientPacketId;
 
 public class AuthenticatePacket extends ClientPacket {
-    private final static ClientPacketId PACKET_TYPE = ClientPacketId.Authenticate;
+    private final static ClientPacketId PACKET_ID = ClientPacketId.Authenticate;
 
     private AuthenticationType authType;
     private String username;
     private String password;
 
     public AuthenticatePacket(AuthenticationType authType, String username, String password) {
-        super(PACKET_TYPE);
+        super(PACKET_ID);
         this.authType = authType;
         this.username = username;
         this.password = password;

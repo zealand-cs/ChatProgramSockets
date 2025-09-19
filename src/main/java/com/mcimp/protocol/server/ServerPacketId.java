@@ -25,7 +25,7 @@ public enum ServerPacketId {
             case Packets.SERVER_DISCONNECTED -> Disconnected;
             case Packets.SERVER_SYSTEM_MESSAGE -> SystemMessage;
             case Packets.SERVER_ROOM_MESSAGE -> UserMessage;
-            default -> throw new RuntimeException("invalid packet type id");
+            default -> throw new RuntimeException("invalid server packet id");
         };
     }
 }

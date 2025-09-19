@@ -8,13 +8,13 @@ import com.mcimp.protocol.server.ServerPacket;
 import com.mcimp.protocol.server.ServerPacketId;
 
 public class ConnectedPacket extends ServerPacket {
-    private final static ServerPacketId PACKET_TYPE = ServerPacketId.Connected;
+    private final static ServerPacketId PACKET_ID = ServerPacketId.Connected;
 
     private short userId;
     private String username;
 
     public ConnectedPacket(short userId, String username) {
-        super(PACKET_TYPE);
+        super(PACKET_ID);
         this.userId = userId;
         this.username = username;
     }

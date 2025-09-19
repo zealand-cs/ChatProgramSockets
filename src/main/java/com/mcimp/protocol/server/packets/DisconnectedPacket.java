@@ -8,13 +8,13 @@ import com.mcimp.protocol.server.ServerPacket;
 import com.mcimp.protocol.server.ServerPacketId;
 
 public class DisconnectedPacket extends ServerPacket {
-    private final static ServerPacketId PACKET_TYPE = ServerPacketId.Disconnected;
+    private final static ServerPacketId PACKET_ID = ServerPacketId.Disconnected;
 
     private short userId;
     private String username;
 
     public DisconnectedPacket(short userId, String username) {
-        super(PACKET_TYPE);
+        super(PACKET_ID);
         this.userId = userId;
         this.username = username;
     }
