@@ -3,7 +3,6 @@ package com.mcimp.protocol.messages;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 public class SystemMessage extends Message {
     private final static MessageType MESSAGE_TYPE = MessageType.System;
@@ -28,15 +27,12 @@ public class SystemMessage extends Message {
 
         stream.writeByte(type.toByte());
 
-        stream.writeInt(text.length());
-        stream.writeBytes(text);
+        stream.writeUTF(text);
     }
 
     public static SystemMessage readFromStream(DataInputStream stream) throws IOException {
         var type = SystemMessageLevel.fromByte(stream.readByte());
-
-        var textLength = stream.readInt();
-        var text = new String(stream.readNBytes(textLength), StandardCharsets.UTF_8);
+        var text = stream.readUTF();
 
         return new SystemMessage(type, text);
     }

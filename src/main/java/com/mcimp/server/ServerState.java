@@ -23,7 +23,10 @@ public class ServerState {
     private Map<Socket, ClientHandler> clients;
 
     private BiMap<Socket, String> authenticatedUsers;
+
     private UserRepository userRepository;
+
+    private EmojiReplacer replacer;
 
     private Room defaultRoom;
     private Map<String, Room> rooms;
@@ -34,6 +37,8 @@ public class ServerState {
 
         this.authenticatedUsers = new SynchronizedBiMap<>(new HashBiMap<>());
         this.userRepository = userRepository;
+
+        this.replacer = new EmojiReplacer("emojiLookup.csv");
 
         this.rooms = Collections.synchronizedMap(new HashMap<>());
         this.roomClients = Collections.synchronizedMap(new HashMap<>());
@@ -74,7 +79,7 @@ public class ServerState {
     }
 
     public synchronized Room createRoom(String id, String displayName) {
-        var room = new Room(id, displayName);
+        var room = new Room(id, displayName, replacer);
         rooms.put(id, room);
         return room;
     }
@@ -119,17 +124,19 @@ public class ServerState {
 }
 
 class Room {
-    private static final EmojiReplacer replacer = new EmojiReplacer("/emojiLookup.csv");
-
     private String id;
     private String name;
 
     private List<ClientHandler> clients;
 
-    public Room(String id, String name) {
+    private final EmojiReplacer replacer;
+
+    public Room(String id, String name, EmojiReplacer replacer) {
         this.id = id;
         this.name = name;
         this.clients = new ArrayList<>();
+
+        this.replacer = replacer;
     }
 
     public void broadcastAll(Packet packet) throws IOException {
@@ -140,12 +147,12 @@ class Room {
 
     public void broadcast(ClientHandler sender, Packet packet) throws IOException {
         var text = (TextMessage) packet;
+        var replaced = replacer.replaceEmojis(text.getText());
+
         for (var client : clients) {
             if (client == sender) {
                 continue;
             }
-
-            var replaced = replacer.replaceEmojis(text.getText());
 
             client.getOutputStream()
                     .sendInfoMessage("[" + getName() + "] " + sender.getUsername() + ": " + replaced);

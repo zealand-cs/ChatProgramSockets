@@ -15,10 +15,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.mcimp.protocol.ProtocolInputStream;
 import com.mcimp.protocol.ProtocolOutputStream;
-import com.mcimp.protocol.commands.JoinCommand;
 import com.mcimp.protocol.messages.SystemMessage;
-import com.mcimp.protocol.packets.AuthPacket;
-import com.mcimp.protocol.packets.AuthType;
 import com.mcimp.protocol.packets.ConnectPacket;
 
 public class Client {

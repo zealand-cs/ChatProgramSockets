@@ -3,7 +3,6 @@ package com.mcimp.protocol.messages;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 public class EmojiMessage extends Message {
     private final static MessageType MESSAGE_TYPE = MessageType.Emoji;
@@ -17,14 +16,11 @@ public class EmojiMessage extends Message {
     @Override
     public void writeToStream(DataOutputStream stream) throws IOException {
         super.writeToStream(stream);
-        stream.writeInt(text.length());
-        stream.writeBytes(text);
+        stream.writeUTF(text);
     }
 
     public static TextMessage readFromStream(DataInputStream stream) throws IOException {
-        var textLength = stream.readInt();
-        var text = new String(stream.readNBytes(textLength), StandardCharsets.UTF_8);
-
+        var text = stream.readUTF();
         return new TextMessage(text);
     }
 }
