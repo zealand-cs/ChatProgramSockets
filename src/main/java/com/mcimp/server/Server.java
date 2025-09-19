@@ -2,9 +2,6 @@ package com.mcimp.server;
 
 import java.io.*;
 import java.net.*;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -16,18 +13,22 @@ import com.mcimp.repository.UserRepository;
 public class Server {
     private static final Logger logger = LogManager.getLogger(Server.class);
 
-    private static UserRepository repo;
-    private static final Set<String> loggedInUsers = ConcurrentHashMap.newKeySet();
     private final ExecutorService pool;
-
     private int port;
 
+    private UserRepository repo;
     private ServerState state;
 
     public Server(int threads, int port) {
         pool = Executors.newFixedThreadPool(threads);
-
         this.port = port;
+
+        try {
+            this.repo = new UserRepository("users.json");
+        } catch (IOException ex) {
+            throw new RuntimeException("users.json could not be read");
+        }
+
         this.state = new ServerState(repo);
     }
 
@@ -67,8 +68,7 @@ public class Server {
         }
     }
 
-    public static void main(String[] args) throws IOException {
-        repo = new UserRepository("users.json");
+    public static void main(String[] args) {
         Server server = new Server(5, 5555);
         server.startServer();
     }

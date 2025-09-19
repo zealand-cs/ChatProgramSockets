@@ -1,18 +1,13 @@
 package com.mcimp.server;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import com.mcimp.protocol.Packet;
 import com.mcimp.protocol.commands.JoinCommand;
-import com.mcimp.protocol.messages.TextMessage;
 import com.mcimp.repository.UserRepository;
 import com.mcimp.utils.BiMap;
 import com.mcimp.utils.EmojiReplacer;
@@ -42,7 +37,7 @@ public class ServerState {
 
         this.rooms = Collections.synchronizedMap(new HashMap<>());
         this.roomClients = Collections.synchronizedMap(new HashMap<>());
-        this.defaultRoom = createRoom(JoinCommand.DEFAULT_ROOM, "Global");
+        this.defaultRoom = createRoom(JoinCommand.DEFAULT_ROOM);
     }
 
     public synchronized void addClient(Socket socket, ClientHandler client) {
@@ -78,8 +73,8 @@ public class ServerState {
         authenticatedUsers.put(socket, username);
     }
 
-    public synchronized Room createRoom(String id, String displayName) {
-        var room = new Room(id, displayName, replacer);
+    public synchronized Room createRoom(String id) {
+        var room = new Room(id, replacer);
         rooms.put(id, room);
         return room;
     }
@@ -120,62 +115,5 @@ public class ServerState {
 
     public Map<String, Room> getRooms() {
         return rooms;
-    }
-}
-
-class Room {
-    private String id;
-    private String name;
-
-    private List<ClientHandler> clients;
-
-    private final EmojiReplacer replacer;
-
-    public Room(String id, String name, EmojiReplacer replacer) {
-        this.id = id;
-        this.name = name;
-        this.clients = new ArrayList<>();
-
-        this.replacer = replacer;
-    }
-
-    public void broadcastAll(Packet packet) throws IOException {
-        for (var client : clients) {
-            client.getOutputStream().writePacket(packet);
-        }
-    }
-
-    public void broadcast(ClientHandler sender, Packet packet) throws IOException {
-        var text = (TextMessage) packet;
-        var replaced = replacer.replaceEmojis(text.getText());
-
-        for (var client : clients) {
-            if (client == sender) {
-                continue;
-            }
-
-            client.getOutputStream()
-                    .sendInfoMessage("[" + getName() + "] " + sender.getUsername() + ": " + replaced);
-        }
-    }
-
-    public void addClient(ClientHandler clien) {
-        clients.add(clien);
-    }
-
-    public void removeClient(ClientHandler client) {
-        clients.remove(client);
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 }

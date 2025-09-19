@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -44,7 +45,7 @@ public class Client {
                     ProtocolInputStream input = new ProtocolInputStream(socket.getInputStream());
                     ProtocolOutputStream output = new ProtocolOutputStream(socket.getOutputStream());) {
 
-                output.writePacket(new ConnectPacket());
+                output.send(new ConnectPacket());
 
                 var welcomeMessage = (SystemMessage) input.readPacket();
                 terminal.write(welcomeMessage.getText() + "\n");
@@ -60,8 +61,10 @@ public class Client {
                 var outgoingHandler = Executors.callable(new OutgoingHandler(output, terminal));
                 tasks.add(outgoingHandler);
 
-                pool.invokeAll(tasks);
+                pool.invokeAny(tasks);
                 // TODO: Handle exceptions, when added, then send confirmation or error
+            } catch (ExecutionException ex) {
+                logger.info("closing everything down: ", ex);
             } catch (InterruptedException e) {
                 logger.error("error occoured in pool: ", e);
             } finally {
@@ -80,10 +83,15 @@ public class Client {
                 }
             }
 
-        } catch (SocketTimeoutException e) {
-            logger.error("socket connection to " + hostname + ":" + port + " timed out: " + e);
         } catch (IOException e) {
             logger.error("unknown IO Exception occoured: " + e);
+        } finally {
+            try {
+                terminal.close();
+                pool.close();
+            } catch (IOException ex) {
+                throw new RuntimeException("exception while closing applicaiton: " + ex);
+            }
         }
     }
 

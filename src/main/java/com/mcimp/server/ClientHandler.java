@@ -54,19 +54,17 @@ public class ClientHandler implements Runnable {
 
             logger.info("connection established successfully");
 
-            var welcome = new StringBuilder()
-                    .append("Welcome to the server!\n")
-                    .append("Login with `/login` or `/register`\n")
-                    .append("Joined room ")
-                    .append(JoinCommand.DEFAULT_ROOM);
-
-            output.sendInfoMessage(welcome.toString());
+            output.send(SystemMessage.info("Welcome to the server!\n"));
+            output.send(SystemMessage.info("Login with `/login` or `/register`"));
 
             while (true) {
                 var packet = input.readPacket();
                 handlePacket(packet);
             }
 
+        } catch (EOFException ex) {
+            state.removeClient(socket);
+            logger.info("socket disconnected");
         } catch (SocketException ex) {
             logger.info("socket to client closed");
         } catch (IOException e) {
@@ -83,7 +81,7 @@ public class ClientHandler implements Runnable {
 
     private void handlePacket(Packet packet) throws IOException {
         if (!state.isAuthenticated(socket) && packet.getType() != PacketType.Auth) {
-            output.sendInfoMessage("Login with either `/login` or `/register` to do anything");
+            output.send(SystemMessage.warn("Login with either `/login` or `/register` to do anything"));
             return;
         }
 
@@ -97,7 +95,7 @@ public class ClientHandler implements Runnable {
                 break;
             case PacketType.Auth:
                 if (state.isAuthenticated(socket)) {
-                    output.sendInfoMessage("You're already authenticated");
+                    output.send(SystemMessage.info("You're already authenticated"));
                     return;
                 }
                 var authPacket = (AuthPacket) packet;
@@ -105,7 +103,7 @@ public class ClientHandler implements Runnable {
                 if (authPacket.getAuthType() == AuthType.Login) {
                     if (!state.userExists(authPacket.getUsername())) {
                         logger.warn(authPacket.getUsername() + " doesn't exist");
-                        output.sendInfoMessage("Invalid credentials.");
+                        output.send(SystemMessage.error("Invalid credentials."));
                         return;
                     }
 
@@ -113,30 +111,29 @@ public class ClientHandler implements Runnable {
 
                     if (!authenticated) {
                         logger.warn(authPacket.getUsername() + " logged in with wrong password");
-                        output.sendInfoMessage("Invalid credentials.");
+                        output.send(SystemMessage.error("Invalid credentials."));
                         return;
                     }
                 } else {
                     if (state.userExists(authPacket.getUsername())) {
                         logger.warn(authPacket.getUsername() + " tried to register with existing user");
-                        output.sendInfoMessage("User already exists.");
+                        output.send(SystemMessage.error("User already exists."));
                         return;
                     }
 
                     state.addAuthSession(authPacket.getUsername(), authPacket.getPassword());
                 }
-                username = authPacket.getUsername();
 
                 username = authPacket.getUsername();
                 state.loginUser(socket, authPacket.getUsername());
 
                 logger.info("{} authenticated successfully", authPacket.getUsername());
 
-                var successMessage = new StringBuilder()
-                        .append("Successfully authenticated!\n")
-                        .append("Type `/help` to see your possibilities");
+                output.send(SystemMessage.success("Successfully authenticated!"));
+                output.send(SystemMessage.info("Type `/help` to see your possibilities"));
 
-                output.sendInfoMessage(successMessage.toString());
+                var room = state.getClientRoom(socket);
+                room.broadcastAll(SystemMessage.info(username + " logged in!"));
 
                 logger.info("sending login info packet");
                 break;
@@ -169,13 +166,13 @@ public class ClientHandler implements Runnable {
 
                     var oldRoom = state.getClientRoom(socket);
                     if (oldRoom.getId().equals(join.getRoomId())) {
-                        output.sendInfoMessage("Already in " + join.getRoomId());
+                        output.send(SystemMessage.info("Already in " + join.getRoomId()));
                         return;
                     }
 
                     var newRoom = state.getRoom(join.getRoomId());
                     if (newRoom.isEmpty()) {
-                        output.sendInfoMessage(join.getRoomId() + " doesn't exist");
+                        output.send(SystemMessage.info(join.getRoomId() + " doesn't exist"));
                         return;
                     }
 

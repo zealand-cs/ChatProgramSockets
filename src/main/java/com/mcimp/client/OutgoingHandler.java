@@ -4,6 +4,7 @@ import java.io.IOException;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jline.reader.UserInterruptException;
 
 import com.mcimp.protocol.ProtocolOutputStream;
 import com.mcimp.protocol.commands.JoinCommand;
@@ -36,8 +37,10 @@ public class OutgoingHandler implements Runnable {
                 }
 
                 var message = new TextMessage(line);
-                stream.writePacket(message);
+                stream.send(message);
             }
+        } catch (UserInterruptException ex) {
+            logger.info("server or client disconnected: closing gracefully");
         } catch (IOException e) {
             logger.error("something went totally and completely wrong: ", e);
         }
@@ -49,7 +52,7 @@ public class OutgoingHandler implements Runnable {
         switch (args[0]) {
             case "join":
                 var join = new JoinCommand(args[1]);
-                stream.writePacket(join);
+                stream.send(join);
                 break;
             case "login":
                 if (args.length != 3 || args[1] == null || args[2] == null) {
@@ -58,7 +61,7 @@ public class OutgoingHandler implements Runnable {
                     return;
                 }
                 var loginAuth = new AuthPacket(AuthType.Login, args[1], args[2]);
-                stream.writePacket(loginAuth);
+                stream.send(loginAuth);
                 break;
             case "register":
                 if (args.length != 3 || args[1] == null || args[2] == null) {
@@ -67,11 +70,11 @@ public class OutgoingHandler implements Runnable {
                     return;
                 }
                 var registerAuth = new AuthPacket(AuthType.Register, args[1], args[2]);
-                stream.writePacket(registerAuth);
+                stream.send(registerAuth);
                 break;
             case "quit", "exit":
                 var disconnect = new DisconnectPacket();
-                stream.writePacket(disconnect);
+                stream.send(disconnect);
                 break;
             default:
                 logger.warn("unknown command `{}`", args[0]);

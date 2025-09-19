@@ -31,9 +31,9 @@ public class EmojiReplacer {
 
         for (var word : splitted) {
             var lookupValue = emojiLookup.getOrDefault(word, word);
-            builder.append(" " + lookupValue);
+            builder.append(lookupValue + " ");
         }
 
-        return builder.toString();
+        return builder.toString().trim();
     }
 }
