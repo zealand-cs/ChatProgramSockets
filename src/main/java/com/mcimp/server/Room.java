@@ -54,4 +54,8 @@ class Room {
     public String getId() {
         return id;
     }
+
+    public boolean isEmpty() {
+        return clients.isEmpty();
+    }
 }

@@ -76,18 +76,18 @@ public class IncomingHandler implements Runnable {
         var str = switch (message.getLevel()) {
             case SystemMessageLevel.Pure -> new AttributedStringBuilder();
             case SystemMessageLevel.Info ->
-                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN))
-                        .append("[Server] ");
+                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN));
             case SystemMessageLevel.Success ->
-                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN))
-                        .append("[Server] ");
+                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
             case SystemMessageLevel.Warning ->
-                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW))
-                        .append("[Server] ");
+                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW));
             case SystemMessageLevel.Error ->
-                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.RED))
-                        .append("[Server] ");
+                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.RED));
         };
+
+        if (message.getLevel() != SystemMessageLevel.Pure) {
+            str.append("[Server] ");
+        }
 
         str.append(message.getText())
                 .style(AttributedStyle.DEFAULT);

@@ -170,20 +170,22 @@ public class ClientHandler implements Runnable {
                         return;
                     }
 
-                    var newRoom = state.getRoom(join.getRoomId());
-                    if (newRoom.isEmpty()) {
-                        output.send(SystemMessage.info(join.getRoomId() + " doesn't exist"));
-                        return;
+                    Room newRoom;
+                    var targetRoom = state.getRoom(join.getRoomId());
+                    if (targetRoom.isEmpty()) {
+                        newRoom = state.createRoom(join.getRoomId());
+                        output.send(SystemMessage.info("Created now room " + join.getRoomId()));
+                    } else {
+                        newRoom = targetRoom.get();
                     }
 
-                    state.moveClientToRoom(socket, newRoom.get());
+                    state.moveClientToRoom(socket, newRoom);
 
                     logger.info("[{}] {} > [{}] {}", oldRoom.getId(), username, join.getRoomId(), username);
 
                     oldRoom.broadcastAll(new SystemMessage(SystemMessageLevel.Info, username + " left the room"));
 
-                    newRoom.get()
-                            .broadcastAll(new SystemMessage(SystemMessageLevel.Info, username + " joined the room"));
+                    newRoom.broadcastAll(new SystemMessage(SystemMessageLevel.Info, username + " joined the room"));
                     break;
                 default:
                     logger.error("invalid command packet received: {}", command.toString());

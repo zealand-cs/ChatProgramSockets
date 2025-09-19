@@ -94,6 +94,11 @@ public class ServerState {
         var oldRoom = roomClients.put(socket, newRoom);
         if (oldRoom != null) {
             oldRoom.removeClient(client);
+
+            // If room is empty and NOT the default room, delete it.
+            if (oldRoom.isEmpty() && !oldRoom.getId().equals(JoinCommand.DEFAULT_ROOM)) {
+                removeRoom(oldRoom.getId());
+            }
         }
 
         newRoom.addClient(client);
