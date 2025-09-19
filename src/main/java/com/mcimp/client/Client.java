@@ -3,6 +3,7 @@ package com.mcimp.client;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -21,21 +22,36 @@ public class Client {
     private static final Logger logger = LogManager.getLogger(Client.class);
     private final ExecutorService pool = Executors.newFixedThreadPool(2);
 
-    private String hostname;
-    private int port;
+    private static final int DEFAULT_PORT = 5555;
+
     private int timeout;
 
     public String name;
 
     private ClientTerminal terminal;
 
-    public Client(String hostname, int port) {
-        this.hostname = hostname;
-        this.port = port;
+    public Client() {
         this.terminal = new ClientTerminal();
     }
 
     public void start() {
+        terminal.writeln("Connect to a remote server or type `.` to connect locally");
+        terminal.flush();
+
+        var connectionString = terminal.readLine();
+
+        String hostname;
+        int port = DEFAULT_PORT;
+        if (connectionString.equals(".")) {
+            hostname = "127.0.0.1";
+        } else {
+            var splitted = connectionString.split(":", 2);
+            hostname = splitted[0];
+            if (splitted.length > 1 && splitted[1] != null) {
+                port = Integer.parseInt(splitted[1]);
+            }
+        }
+
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(hostname, port), timeout);
 
@@ -75,9 +91,10 @@ public class Client {
                     Thread.currentThread().interrupt();
                 }
             }
-
-        } catch (IOException e) {
-            logger.error("unknown IO Exception occoured: " + e);
+        } catch (UnknownHostException ex) {
+            logger.error("The provided host wasn't valid: " + ex.getMessage());
+        } catch (IOException ex) {
+            logger.error("unknown IO Exception occoured: ", ex);
         } finally {
             try {
                 terminal.close();
@@ -89,7 +106,7 @@ public class Client {
     }
 
     public static void main(String[] args) {
-        Client client = new Client("127.0.0.1", 5555);
+        Client client = new Client();
         client.start();
     }
 }
