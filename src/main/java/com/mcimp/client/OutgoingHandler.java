@@ -50,10 +50,6 @@ public class OutgoingHandler implements Runnable {
         var args = command.split(" ");
 
         switch (args[0]) {
-            case "join":
-                var join = new JoinRoomPacket(args[1]);
-                stream.send(join);
-                break;
             case "login":
                 if (args.length != 3 || args[1] == null || args[2] == null) {
                     terminal.writeln("Usage: /login <username> <password>");
@@ -72,13 +68,34 @@ public class OutgoingHandler implements Runnable {
                 var registerAuth = new AuthenticatePacket(AuthenticationType.Register, args[1], args[2]);
                 stream.send(registerAuth);
                 break;
-            case "quit", "exit":
+            case "logout":
                 var disconnect = new DisconnectPacket();
                 stream.send(disconnect);
+                break;
+            case "join":
+                var join = new JoinRoomPacket(args[1]);
+                stream.send(join);
+                break;
+            case "help":
+                printHelp();
                 break;
             default:
                 logger.warn("unknown command `{}`", args[0]);
                 break;
         }
+    }
+
+    private void printHelp() {
+        terminal.writeln("/login <username> <password>");
+        terminal.writeln("  logs in to a specific user");
+        terminal.writeln("/register <username> <password>");
+        terminal.writeln("  registers a new user on the server");
+        terminal.writeln("/logout");
+        terminal.writeln("  logs out of the server");
+        terminal.writeln("/join <room>");
+        terminal.writeln("  joins a room");
+        terminal.writeln("/help");
+        terminal.writeln("  prints this help list");
+        terminal.flush();
     }
 }

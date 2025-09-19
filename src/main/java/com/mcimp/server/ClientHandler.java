@@ -189,7 +189,7 @@ public class ClientHandler implements Runnable {
         var room = state.getClientRoom(socket);
 
         var text = replacer.replaceEmojis(packet.getText());
-        var roomPacket = new UserMessagePacket(username, text);
+        var roomPacket = new UserMessagePacket(username, room.getId(), text);
 
         try {
             room.broadcast(roomPacket, this);

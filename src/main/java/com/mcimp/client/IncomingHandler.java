@@ -70,8 +70,8 @@ public class IncomingHandler implements Runnable {
         terminal.flush();
     }
 
-    private String formatSystemMessage(SystemMessagePacket message) {
-        var str = switch (message.getLevel()) {
+    private String formatSystemMessage(SystemMessagePacket packet) {
+        var str = switch (packet.getLevel()) {
             case SystemMessageLevel.Pure -> new AttributedStringBuilder();
             case SystemMessageLevel.Info ->
                 new AttributedStringBuilder().style(AttributedStyle.DEFAULT.bold());
@@ -83,11 +83,20 @@ public class IncomingHandler implements Runnable {
                 new AttributedStringBuilder().style(AttributedStyle.DEFAULT.bold().foreground(AttributedStyle.RED));
         };
 
-        if (message.getLevel() != SystemMessageLevel.Pure) {
-            str.append("[Server] ");
+        var hour = packet.getTime().getHour();
+        var minute = packet.getTime().getMinute();
+        var second = packet.getTime().getSecond();
+        var timeStr = String.format("%02d:%02d:%02d", hour, minute, second);
+
+        str.append("[");
+        str.append(timeStr);
+        str.append("] ");
+
+        if (packet.getLevel() != SystemMessageLevel.Pure) {
+            str.append("<Server> ");
         }
 
-        str.append(message.getText())
+        str.append(packet.getText())
                 .style(AttributedStyle.DEFAULT);
 
         return str.toAnsi();
@@ -104,14 +113,15 @@ public class IncomingHandler implements Runnable {
 
         var hour = packet.getTime().getHour();
         var minute = packet.getTime().getMinute();
-        var timeStr = String.format("%02d:%02d", hour, minute);
+        var second = packet.getTime().getSecond();
+        var timeStr = String.format("%02d:%02d:%02d", hour, minute, second);
 
         str.append("[");
         str.append(timeStr);
-        str.append("] <");
+        str.append("] (");
+        str.append(packet.getRoomId());
+        str.append(") <");
         str.append(packet.getUsername());
-        str.append("@");
-        str.append("placeholder");
         str.append("> ");
         str.append(packet.getText());
 

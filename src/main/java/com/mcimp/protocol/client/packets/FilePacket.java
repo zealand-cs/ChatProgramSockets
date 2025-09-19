@@ -1,6 +1,5 @@
 package com.mcimp.protocol.client.packets;
 
-import com.mcimp.protocol.client.ClientPacket;
 import com.mcimp.protocol.client.ClientPacketId;
 
 // TODO: actually make it work
