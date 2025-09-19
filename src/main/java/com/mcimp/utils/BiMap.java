@@ -1,5 +1,7 @@
 package com.mcimp.utils;
 
+import java.util.Set;
+
 public interface BiMap<KV, VK> {
     void put(KV key, VK value);
 
@@ -10,4 +12,7 @@ public interface BiMap<KV, VK> {
     void remove(KV key);
 
     void removeByValue(VK value);
+
+    Set<KV> keySet();
+    Set<VK> valueSet();
 }

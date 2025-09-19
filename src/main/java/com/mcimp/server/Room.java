@@ -12,7 +12,7 @@ class Room {
 
     private List<ClientHandler> clients;
 
-    public Room(String id) {
+	public Room(String id) {
         this.id = id;
         this.clients = new ArrayList<>();
     }
@@ -41,6 +41,10 @@ class Room {
     public void removeClient(ClientHandler client) {
         clients.remove(client);
     }
+
+    public List<ClientHandler> getClients() {
+		return clients;
+	}
 
     public String getId() {
         return id;

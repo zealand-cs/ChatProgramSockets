@@ -2,10 +2,11 @@ package com.mcimp.utils;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
-public class HashBiMap<K, V> implements BiMap<K, V> {
-    private Map<K, V> versed;
-    private Map<V, K> inversed;
+public class HashBiMap<KV, VK> implements BiMap<KV, VK> {
+    private Map<KV, VK> versed;
+    private Map<VK, KV> inversed;
 
     public HashBiMap() {
         versed = new HashMap<>();
@@ -13,30 +14,40 @@ public class HashBiMap<K, V> implements BiMap<K, V> {
     }
 
     @Override
-    public void put(K key, V value) {
+    public void put(KV key, VK value) {
         versed.put(key, value);
         inversed.put(value, key);
     }
 
     @Override
-    public V get(K key) {
+    public VK get(KV key) {
         return versed.get(key);
     }
 
     @Override
-    public K getByValue(V value) {
+    public KV getByValue(VK value) {
         return inversed.get(value);
     }
 
     @Override
-    public void remove(K key) {
-        var val = versed.remove(key);
+    public void remove(KV key) {
+        VK val = versed.remove(key);
         inversed.remove(val);
     }
 
     @Override
-    public void removeByValue(V value) {
-        var key = inversed.remove(value);
+    public void removeByValue(VK value) {
+        KV key = inversed.remove(value);
         versed.remove(key);
+    }
+
+    @Override
+    public Set<KV> keySet() {
+        return versed.keySet();
+    }
+
+    @Override
+    public Set<VK> valueSet() {
+        return inversed.keySet();
     }
 }

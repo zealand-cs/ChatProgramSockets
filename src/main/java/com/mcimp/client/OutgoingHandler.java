@@ -7,11 +7,12 @@ import org.apache.logging.log4j.Logger;
 import org.jline.reader.UserInterruptException;
 
 import com.mcimp.protocol.client.ClientOutputStream;
+import com.mcimp.protocol.client.ClientPacketId;
 import com.mcimp.protocol.client.packets.AuthenticatePacket;
 import com.mcimp.protocol.client.packets.AuthenticationType;
-import com.mcimp.protocol.client.packets.DisconnectPacket;
 import com.mcimp.protocol.client.packets.JoinRoomPacket;
 import com.mcimp.protocol.client.packets.MessagePacket;
+import com.mcimp.protocol.client.packets.UnitPacket;
 
 public class OutgoingHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(OutgoingHandler.class);
@@ -69,12 +70,21 @@ public class OutgoingHandler implements Runnable {
                 stream.send(registerAuth);
                 break;
             case "logout":
-                var disconnect = new DisconnectPacket();
+                var disconnect = new UnitPacket(ClientPacketId.Disconnect);
                 stream.send(disconnect);
                 break;
             case "join":
                 var join = new JoinRoomPacket(args[1]);
                 stream.send(join);
+                break;
+            case "room":
+                stream.send(new UnitPacket(ClientPacketId.RoomDetails));
+                break;
+            case "rooms":
+                stream.send(new UnitPacket(ClientPacketId.ListRooms));
+                break;
+            case "users":
+                stream.send(new UnitPacket(ClientPacketId.ListUsers));
                 break;
             case "help":
                 printHelp();
@@ -94,6 +104,12 @@ public class OutgoingHandler implements Runnable {
         terminal.writeln("  logs out of the server");
         terminal.writeln("/join <room>");
         terminal.writeln("  joins a room");
+        terminal.writeln("/room");
+        terminal.writeln("  lists details about your current room");
+        terminal.writeln("/rooms");
+        terminal.writeln("  lists all rooms on the server");
+        terminal.writeln("/users");
+        terminal.writeln("  lists users on the server");
         terminal.writeln("/help");
         terminal.writeln("  prints this help list");
         terminal.flush();

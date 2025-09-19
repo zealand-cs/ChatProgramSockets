@@ -37,14 +37,6 @@ public class IncomingHandler implements Runnable {
                 var packet = stream.read();
 
                 switch (packet.getType()) {
-                    case ServerPacketId.Connected:
-                        logger.info("Server: " + packet);
-                        // TODO: Correct output
-                        break;
-                    case ServerPacketId.Disconnected:
-                        logger.info("Server: " + packet);
-                        // TODO: Correct output
-                        break;
                     case ServerPacketId.SystemMessage:
                         handleSystemMessage((SystemMessagePacket) packet);
                         break;

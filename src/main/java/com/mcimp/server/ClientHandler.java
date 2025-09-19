@@ -101,6 +101,15 @@ public class ClientHandler implements Runnable {
             case ClientPacketId.JoinRoom:
                 handleJoinRoom((JoinRoomPacket) packet);
                 break;
+            case ClientPacketId.RoomDetails:
+                handleRoomDetails();
+                break;
+            case ClientPacketId.ListRooms:
+                handleListRooms();
+                break;
+            case ClientPacketId.ListUsers:
+                handleListUsers();
+                break;
             case ClientPacketId.Message:
                 handleMessage((MessagePacket) packet);
                 break;
@@ -183,6 +192,54 @@ public class ClientHandler implements Runnable {
         logger.info("[{}] {} > [{}] {}", oldRoom.getId(), username, join.getRoomId(), username);
 
         newRoom.broadcast(builder.info().user().text(username + " joined the room").build());
+    }
+
+    private void handleRoomDetails() throws IOException {
+        var room = state.getClientRoom(socket);
+
+        var sb = new StringBuilder("Room details:")
+                .append("\nRoom: ")
+                .append(room.getId())
+                .append("\nUsers:");
+
+        for (var client : room.getClients()) {
+            if (client.username != null) {
+                sb.append("\n- ").append(client.username);
+            }
+        }
+        sb.append("\nTotal: ").append(room.getClients().size());
+
+        var packet = SystemMessagePacket.builder().info().user().text(sb.toString()).build();
+        output.send(packet);
+    }
+
+    private void handleListRooms() throws IOException {
+        var rooms = state.getRooms();
+
+        var sb = new StringBuilder("The server has the following rooms:");
+        for (var room : rooms) {
+            sb.append("\n- ").append(room.getId());
+        }
+
+        var packet = SystemMessagePacket.builder().info().user().text(sb.toString()).build();
+        output.send(packet);
+    }
+
+    private void handleListUsers() throws IOException {
+        var usernames = state.getAuthenticatedUsers();
+        var clients = state.getClients();
+
+        var builder = SystemMessagePacket.builder();
+        var sb = new StringBuilder("Users on the server:");
+
+        for (var username : usernames) {
+            sb.append("\n- ").append(username);
+        }
+
+        sb.append("\nClients not logged in: ").append(clients.size() - usernames.size());
+
+        var packet = builder.info().user().text(sb.toString()).build();
+        output.send(packet);
     }
 
     private void handleMessage(MessagePacket packet) {

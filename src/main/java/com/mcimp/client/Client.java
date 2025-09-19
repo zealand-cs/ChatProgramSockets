@@ -15,7 +15,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.mcimp.protocol.client.ClientOutputStream;
-import com.mcimp.protocol.client.packets.ConnectPacket;
+import com.mcimp.protocol.client.ClientPacketId;
+import com.mcimp.protocol.client.packets.UnitPacket;
 import com.mcimp.protocol.server.ServerInputStream;
 
 public class Client {
@@ -59,7 +60,7 @@ public class Client {
                     var input = new ServerInputStream(socket.getInputStream());
                     var output = new ClientOutputStream(socket.getOutputStream());) {
 
-                output.send(new ConnectPacket());
+                output.send(new UnitPacket(ClientPacketId.Connect));
 
                 // Start multiple threads, waiting for
                 var tasks = new ArrayList<Callable<Object>>(2);

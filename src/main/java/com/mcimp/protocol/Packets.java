@@ -15,7 +15,10 @@ public class Packets {
     public static final byte CLIENT_DISCONNECT     = 0x41;
     public static final byte CLIENT_AUTHENTICATE   = 0x42;
     public static final byte CLIENT_JOIN_ROOM      = 0x43;
-    public static final byte CLIENT_SEND_MESSAGE   = 0x44;
+    public static final byte CLIENT_ROOM_DETAILS   = 0x44;
+    public static final byte CLIENT_LIST_ROOMS     = 0x45;
+    public static final byte CLIENT_LIST_USERS     = 0x46;
+    public static final byte CLIENT_SEND_MESSAGE   = 0x47;
 
     public static boolean isServerPacket(byte p) {
         return p > NULL_PACKET && p < CLIENT_CONNECT;

@@ -6,10 +6,9 @@ import java.io.IOException;
 
 import com.mcimp.protocol.PacketInterface;
 import com.mcimp.protocol.client.packets.AuthenticatePacket;
-import com.mcimp.protocol.client.packets.ConnectPacket;
-import com.mcimp.protocol.client.packets.DisconnectPacket;
 import com.mcimp.protocol.client.packets.JoinRoomPacket;
 import com.mcimp.protocol.client.packets.MessagePacket;
+import com.mcimp.protocol.client.packets.UnitPacket;
 
 public abstract class ClientPacket implements PacketInterface {
     private ClientPacketId type;
@@ -29,10 +28,13 @@ public abstract class ClientPacket implements PacketInterface {
         var type = ClientPacketId.fromByte(stream.readByte());
 
         return switch (type) {
-            case ClientPacketId.Connect -> ConnectPacket.readFromStream(stream);
-            case ClientPacketId.Disconnect -> DisconnectPacket.readFromStream(stream);
+            case ClientPacketId.Connect -> new UnitPacket(ClientPacketId.Connect);
+            case ClientPacketId.Disconnect -> new UnitPacket(ClientPacketId.Disconnect);
             case ClientPacketId.Authenticate -> AuthenticatePacket.readFromStream(stream);
             case ClientPacketId.JoinRoom -> JoinRoomPacket.readFromStream(stream);
+            case ClientPacketId.RoomDetails -> new UnitPacket(ClientPacketId.RoomDetails);
+            case ClientPacketId.ListRooms -> new UnitPacket(ClientPacketId.ListRooms);
+            case ClientPacketId.ListUsers -> new UnitPacket(ClientPacketId.ListUsers);
             case ClientPacketId.Message -> MessagePacket.readFromStream(stream);
         };
     }

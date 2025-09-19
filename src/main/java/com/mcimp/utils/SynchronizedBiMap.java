@@ -1,5 +1,7 @@
 package com.mcimp.utils;
 
+import java.util.Set;
+
 public class SynchronizedBiMap<KV, VK> implements BiMap<KV, VK> {
     private BiMap<KV, VK> bimap;
 
@@ -32,4 +34,13 @@ public class SynchronizedBiMap<KV, VK> implements BiMap<KV, VK> {
         bimap.removeByValue(value);
     }
 
+    @Override
+    public synchronized Set<KV> keySet() {
+        return bimap.keySet();
+    }
+    
+    @Override
+    public synchronized Set<VK> valueSet() {
+        return bimap.valueSet();
+    }
 }

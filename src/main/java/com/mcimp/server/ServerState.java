@@ -2,6 +2,7 @@ package com.mcimp.server;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -46,6 +47,7 @@ public class ServerState {
         var client = clients.remove(socket);
         var room = getClientRoom(socket);
         room.removeClient(client);
+        authenticatedUsers.remove(socket);
         roomClients.remove(socket);
     }
 
@@ -110,11 +112,19 @@ public class ServerState {
         return client;
     }
 
+    public Collection<ClientHandler> getClients() {
+        return clients.values();
+    }
+
+    public Collection<String> getAuthenticatedUsers() {
+        return authenticatedUsers.valueSet();
+    }
+
     public Optional<Room> getRoom(String roomId) {
         return Optional.ofNullable(rooms.get(roomId));
     }
 
-    public Map<String, Room> getRooms() {
-        return rooms;
+    public Collection<Room> getRooms() {
+        return rooms.values();
     }
 }
