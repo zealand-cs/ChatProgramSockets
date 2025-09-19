@@ -8,29 +8,37 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import com.mcimp.repository.TmpFileRepository;
 import com.mcimp.repository.UserRepository;
 import com.mcimp.utils.BiMap;
 import com.mcimp.utils.HashBiMap;
 import com.mcimp.utils.SynchronizedBiMap;
 
-public class ServerState {
+public class ServerState implements AutoCloseable {
     public static final String DEFAULT_ROOM = "global";
 
-    private Map<Socket, ClientHandler> clients;
+    private final Map<Socket, ClientHandler> clients;
 
-    private BiMap<Socket, String> authenticatedUsers;
+    private final BiMap<Socket, String> authenticatedUsers;
 
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final TmpFileRepository fileRepository;
 
-    private Room defaultRoom;
-    private Map<String, Room> rooms;
-    private Map<Socket, Room> roomClients;
+    private final Room defaultRoom;
+    private final Map<String, Room> rooms;
+    private final Map<Socket, Room> roomClients;
 
-    public ServerState(UserRepository userRepository) {
+    public ServerState() {
         this.clients = Collections.synchronizedMap(new HashMap<>());
 
         this.authenticatedUsers = new SynchronizedBiMap<>(new HashBiMap<>());
-        this.userRepository = userRepository;
+
+        try {
+            this.userRepository = new UserRepository("users.json");
+            this.fileRepository = new TmpFileRepository("./tmpFiles");
+        } catch (IOException ex) {
+            throw new RuntimeException("users.json could not be read");
+        }
 
         this.rooms = Collections.synchronizedMap(new HashMap<>());
         this.roomClients = Collections.synchronizedMap(new HashMap<>());
@@ -126,5 +134,17 @@ public class ServerState {
 
     public Collection<Room> getRooms() {
         return rooms.values();
+    }
+
+    public TmpFileRepository getFileRepository() {
+        return fileRepository;
+    }
+
+    @Override
+    public void close() throws IOException {
+        fileRepository.close();
+        for (var socket : clients.keySet()) {
+            socket.close();
+        }
     }
 }

@@ -6,6 +6,7 @@ import java.io.IOException;
 
 import com.mcimp.protocol.PacketInterface;
 import com.mcimp.protocol.client.packets.AuthenticatePacket;
+import com.mcimp.protocol.client.packets.FileDownloadRequestPacket;
 import com.mcimp.protocol.client.packets.JoinRoomPacket;
 import com.mcimp.protocol.client.packets.MessagePacket;
 import com.mcimp.protocol.client.packets.UnitPacket;
@@ -36,6 +37,11 @@ public abstract class ClientPacket implements PacketInterface {
             case ClientPacketId.ListRooms -> new UnitPacket(ClientPacketId.ListRooms);
             case ClientPacketId.ListUsers -> new UnitPacket(ClientPacketId.ListUsers);
             case ClientPacketId.Message -> MessagePacket.readFromStream(stream);
+
+            // File upload is a special case. Returns a unit packet to correctly handle the
+            // stream at a later point
+            case ClientPacketId.FileUpload -> new UnitPacket(ClientPacketId.FileUpload);
+            case ClientPacketId.FileDownloadRequest -> FileDownloadRequestPacket.readFromStream(stream);
         };
     }
 

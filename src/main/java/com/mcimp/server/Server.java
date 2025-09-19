@@ -9,38 +9,30 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import com.mcimp.utils.EmojiReplacer;
-import com.mcimp.repository.UserRepository;
 
 public class Server {
     private static final Logger logger = LogManager.getLogger(Server.class);
 
     private final ExecutorService pool;
-    private int port;
-
-    private UserRepository repo;
-    private ServerState state;
+    private final int port;
+    private final ServerState state;
 
     public Server(int threads, int port) {
         pool = Executors.newFixedThreadPool(threads);
         this.port = port;
-
-        try {
-            this.repo = new UserRepository("users.json");
-        } catch (IOException ex) {
-            throw new RuntimeException("users.json could not be read");
-        }
-
-        this.state = new ServerState(repo);
-    }
-
-    private volatile boolean running = true;
-
-    public void stop() {
-        running = false;
+        this.state = new ServerState();
     }
 
     public void startServer() {
-        running = true;
+        // Makes sure to clean up, when the server stops unexpectedly
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                state.close();
+            } catch (IOException err) {
+                err.printStackTrace();
+            }
+        }));
+
         EmojiReplacer replacer = new EmojiReplacer("emojiLookup.csv");
 
         // Try with resources automatically closes the ServerSocket if an exception
@@ -49,7 +41,7 @@ public class Server {
             logger.info("Server is listening on port " + port);
 
             // Necessary to handle multiple clients at the same time
-            while (running) {
+            while (true) {
                 Socket clientSocket = serverSocket.accept();
 
                 var client = new ClientHandler(clientSocket, state, replacer);

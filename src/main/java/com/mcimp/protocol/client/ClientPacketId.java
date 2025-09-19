@@ -12,7 +12,9 @@ public enum ClientPacketId {
     RoomDetails,
     ListRooms,
     ListUsers,
-    Message;
+    Message,
+    FileUpload,
+    FileDownloadRequest;
 
     public byte toByte() {
         return switch (this) {
@@ -26,6 +28,8 @@ public enum ClientPacketId {
             case ListUsers -> Packets.CLIENT_LIST_USERS;
 
             case Message -> Packets.CLIENT_SEND_MESSAGE;
+            case FileUpload -> Packets.CLIENT_FILE_UPLOAD;
+            case FileDownloadRequest -> Packets.CLIENT_FILE_DOWNLOAD_REQUEST;
         };
     }
 
@@ -41,6 +45,8 @@ public enum ClientPacketId {
             case Packets.CLIENT_LIST_USERS -> ListUsers;
 
             case Packets.CLIENT_SEND_MESSAGE -> Message;
+            case Packets.CLIENT_FILE_UPLOAD -> FileUpload;
+            case Packets.CLIENT_FILE_DOWNLOAD_REQUEST -> FileDownloadRequest;
             default -> throw new RuntimeException("invalid client packet id");
         };
     }

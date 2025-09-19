@@ -1,6 +1,7 @@
 package com.mcimp.client;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -10,6 +11,7 @@ import com.mcimp.protocol.client.ClientOutputStream;
 import com.mcimp.protocol.client.ClientPacketId;
 import com.mcimp.protocol.client.packets.AuthenticatePacket;
 import com.mcimp.protocol.client.packets.AuthenticationType;
+import com.mcimp.protocol.client.packets.FileUploadPacket;
 import com.mcimp.protocol.client.packets.JoinRoomPacket;
 import com.mcimp.protocol.client.packets.MessagePacket;
 import com.mcimp.protocol.client.packets.UnitPacket;
@@ -33,7 +35,7 @@ public class OutgoingHandler implements Runnable {
             while ((line = terminal.readLine().trim()) != null) {
                 if (line.startsWith("/")) {
                     // Substring to remove slash
-                    handleCommand(line.substring(1));
+                    handleCommand(line.substring(1).split(" "));
                     continue;
                 }
 
@@ -47,10 +49,10 @@ public class OutgoingHandler implements Runnable {
         }
     }
 
-    private void handleCommand(String command) throws IOException {
-        var args = command.split(" ");
+    private void handleCommand(String[] args) throws IOException {
+        var command = args[0];
 
-        switch (args[0]) {
+        switch (command) {
             case "login":
                 if (args.length != 3 || args[1] == null || args[2] == null) {
                     terminal.writeln("Usage: /login <username> <password>");
@@ -74,6 +76,11 @@ public class OutgoingHandler implements Runnable {
                 stream.send(disconnect);
                 break;
             case "join":
+                if (args.length != 2 || args[1] == null) {
+                    terminal.writeln("Usage: /join <room>");
+                    terminal.flush();
+                    return;
+                }
                 var join = new JoinRoomPacket(args[1]);
                 stream.send(join);
                 break;
@@ -85,6 +92,16 @@ public class OutgoingHandler implements Runnable {
                 break;
             case "users":
                 stream.send(new UnitPacket(ClientPacketId.ListUsers));
+                break;
+            case "upload":
+                if (args.length < 2) {
+                    terminal.writeln("Usage: /upload <file>");
+                    terminal.flush();
+                    return;
+                }
+                // Join together rest of args, since that would just be a filepath with spaces
+                var file = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+                stream.send(new FileUploadPacket(file));
                 break;
             case "help":
                 printHelp();
@@ -110,6 +127,10 @@ public class OutgoingHandler implements Runnable {
         terminal.writeln("  lists all rooms on the server");
         terminal.writeln("/users");
         terminal.writeln("  lists users on the server");
+        terminal.writeln("/upload <file>");
+        terminal.writeln("  uploads a file to the server");
+        terminal.writeln("/download <fileId> <targetFile>");
+        terminal.writeln("  downloads a file from the server");
         terminal.writeln("/help");
         terminal.writeln("  prints this help list");
         terminal.flush();

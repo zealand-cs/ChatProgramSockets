@@ -19,4 +19,8 @@ public abstract class ProtocolInputStream implements AutoCloseable {
     public void close() throws IOException {
         stream.close();
     }
+
+    public DataInputStream getInnerStream() {
+        return stream;
+    }
 }

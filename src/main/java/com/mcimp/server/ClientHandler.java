@@ -10,6 +10,7 @@ import com.mcimp.protocol.client.ClientPacket;
 import com.mcimp.protocol.client.ClientPacketId;
 import com.mcimp.protocol.client.packets.AuthenticatePacket;
 import com.mcimp.protocol.client.packets.AuthenticationType;
+import com.mcimp.protocol.client.packets.FileUploadPacket;
 import com.mcimp.protocol.client.packets.JoinRoomPacket;
 import com.mcimp.protocol.client.packets.MessagePacket;
 import com.mcimp.protocol.server.ServerOutputStream;
@@ -81,7 +82,8 @@ public class ClientHandler implements Runnable {
     }
 
     private void handlePacket(ClientPacket packet) throws IOException {
-        if (!state.isAuthenticated(socket) && packet.getType() != ClientPacketId.Authenticate) {
+        if (!state.isAuthenticated(socket) && packet.getType() != ClientPacketId.Authenticate
+                && packet.getType() != ClientPacketId.Disconnect) {
             output.send(SystemMessagePacket.builder().warn().user()
                     .text("Login with either `/login` or `/register` to do anything").build());
             return;
@@ -112,6 +114,9 @@ public class ClientHandler implements Runnable {
                 break;
             case ClientPacketId.Message:
                 handleMessage((MessagePacket) packet);
+                break;
+            case ClientPacketId.FileUpload:
+                handleFileUpload(packet);
                 break;
             default:
                 logger.warn("unhandled packet: ", packet.toString());
@@ -161,6 +166,17 @@ public class ClientHandler implements Runnable {
         room.broadcast(SystemMessagePacket.builder().info().user().text(username + " logged in!").build());
 
         logger.info("sending login info packet");
+    }
+
+    private void handleFileUpload(ClientPacket packet) throws IOException {
+        logger.info("receiving file from client " + username);
+
+        var fileId = state.getFileRepository().createFileId();
+        var fileStream = state.getFileRepository().fileStream(fileId);
+
+        // Currently stops all UI on server terminal propably because System.out gets
+        // blocked or something
+        FileUploadPacket.readInputStreamToStream(input.getInnerStream(), fileStream);
     }
 
     private void handleJoinRoom(JoinRoomPacket join) throws IOException {
