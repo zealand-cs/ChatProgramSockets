@@ -4,12 +4,13 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+import com.mcimp.protocol.PacketInterface;
 import com.mcimp.protocol.server.packets.ConnectedPacket;
 import com.mcimp.protocol.server.packets.DisconnectedPacket;
 import com.mcimp.protocol.server.packets.SystemMessagePacket;
 import com.mcimp.protocol.server.packets.UserMessagePacket;
 
-public abstract class ServerPacket {
+public abstract class ServerPacket implements PacketInterface {
     private ServerPacketId type;
 
     public ServerPacket(ServerPacketId type) {
@@ -18,7 +19,10 @@ public abstract class ServerPacket {
 
     public void writeToStream(DataOutputStream stream) throws IOException {
         stream.writeByte(type.toByte());
+        writeToStreamImpl(stream);
     }
+
+    protected abstract void writeToStreamImpl(DataOutputStream stream) throws IOException;
 
     public static ServerPacket readPacket(DataInputStream stream) throws IOException {
         var type = ServerPacketId.fromByte(stream.readByte());

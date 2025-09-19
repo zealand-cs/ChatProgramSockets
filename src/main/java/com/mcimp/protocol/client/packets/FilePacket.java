@@ -4,13 +4,13 @@ import com.mcimp.protocol.client.ClientPacket;
 import com.mcimp.protocol.client.ClientPacketId;
 
 // TODO: actually make it work
-public class FilePacket extends ClientPacket {
+public class FilePacket {
     private final static ClientPacketId PACKET_ID = ClientPacketId.Connect;
 
     private String path;
 
     public FilePacket(String path) {
-        super(PACKET_ID);
+        // super(PACKET_ID);
     }
 
     // public FileMessage(Message messagePacket, String text) {
@@ -22,7 +22,6 @@ public class FilePacket extends ClientPacket {
 
     // @Override
     // public void writeToStream(DataOutputStream stream) throws IOException {
-    // super.writeToStream(stream);
     // stream.writeInt(text.length());
     // stream.writeBytes(text);
     // }

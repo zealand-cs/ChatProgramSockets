@@ -20,8 +20,7 @@ public class DisconnectedPacket extends ServerPacket {
     }
 
     @Override
-    public void writeToStream(DataOutputStream stream) throws IOException {
-        super.writeToStream(stream);
+    protected void writeToStreamImpl(DataOutputStream stream) throws IOException {
         stream.writeShort(userId);
         stream.writeUTF(username);
     }

@@ -1,6 +1,7 @@
 package com.mcimp.protocol.client.packets;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 
 import com.mcimp.protocol.client.ClientPacket;
@@ -11,6 +12,10 @@ public class ConnectPacket extends ClientPacket {
 
     public ConnectPacket() {
         super(PACKET_TYPE);
+    }
+
+    @Override
+    public void writeToStreamImpl(DataOutputStream stream) throws IOException {
     }
 
     public static ConnectPacket readFromStream(DataInputStream stream) throws IOException {

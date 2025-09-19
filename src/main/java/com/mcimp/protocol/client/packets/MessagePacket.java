@@ -18,8 +18,7 @@ public class MessagePacket extends ClientPacket {
     }
 
     @Override
-    public void writeToStream(DataOutputStream stream) throws IOException {
-        super.writeToStream(stream);
+    protected void writeToStreamImpl(DataOutputStream stream) throws IOException {
         stream.writeUTF(text);
     }
 

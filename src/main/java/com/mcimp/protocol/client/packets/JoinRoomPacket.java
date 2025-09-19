@@ -8,7 +8,7 @@ import com.mcimp.protocol.client.ClientPacket;
 import com.mcimp.protocol.client.ClientPacketId;
 
 public class JoinRoomPacket extends ClientPacket {
-    private final static ClientPacketId PACKET_TYPE = ClientPacketId.Connect;
+    private final static ClientPacketId PACKET_TYPE = ClientPacketId.JoinRoom;
 
     private String roomId;
 
@@ -18,8 +18,7 @@ public class JoinRoomPacket extends ClientPacket {
     }
 
     @Override
-    public void writeToStream(DataOutputStream stream) throws IOException {
-        super.writeToStream(stream);
+    protected void writeToStreamImpl(DataOutputStream stream) throws IOException {
         stream.writeUTF(roomId);
     }
 

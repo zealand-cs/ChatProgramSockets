@@ -172,15 +172,16 @@ public class ClientHandler implements Runnable {
         var targetRoom = state.getRoom(join.getRoomId());
         if (targetRoom.isEmpty()) {
             newRoom = state.createRoom(join.getRoomId());
-            output.send(builder.info().user().text("Created now room " + join.getRoomId()).build());
+            output.send(builder.info().user().text("Created new room " + join.getRoomId()).build());
         } else {
             newRoom = targetRoom.get();
         }
 
+        state.moveClientToRoom(socket, newRoom);
+
         oldRoom.broadcast(builder.info().user().text(username + " left the room").build());
         logger.info("[{}] {} > [{}] {}", oldRoom.getId(), username, join.getRoomId(), username);
 
-        state.moveClientToRoom(socket, newRoom);
         newRoom.broadcast(builder.info().user().text(username + " joined the room").build());
     }
 

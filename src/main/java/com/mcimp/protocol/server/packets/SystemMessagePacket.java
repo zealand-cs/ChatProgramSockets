@@ -28,9 +28,7 @@ public class SystemMessagePacket extends ServerPacket {
     }
 
     @Override
-    public void writeToStream(DataOutputStream stream) throws IOException {
-        super.writeToStream(stream);
-
+    protected void writeToStreamImpl(DataOutputStream stream) throws IOException {
         stream.writeByte(scope.toByte());
         stream.writeByte(level.toByte());
         stream.writeUTF(text);

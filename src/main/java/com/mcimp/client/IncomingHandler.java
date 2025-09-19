@@ -102,10 +102,17 @@ public class IncomingHandler implements Runnable {
     private String formatUserMessage(UserMessagePacket packet) {
         var str = new AttributedStringBuilder();
 
-        str.append(packet.getTime().toString());
-        str.append(" ");
+        var hour = packet.getTime().getHour();
+        var minute = packet.getTime().getMinute();
+        var timeStr = String.format("%02d:%02d", hour, minute);
+
+        str.append("[");
+        str.append(timeStr);
+        str.append("] <");
         str.append(packet.getUsername());
-        str.append(": ");
+        str.append("@");
+        str.append("placeholder");
+        str.append("> ");
         str.append(packet.getText());
 
         return str.toAnsi();

@@ -29,7 +29,7 @@ public class UserMessagePacket extends ServerPacket {
     }
 
     @Override
-    public void writeToStream(DataOutputStream stream) throws IOException {
+    protected void writeToStreamImpl(DataOutputStream stream) throws IOException {
         stream.writeLong(time.toEpochSecond());
         stream.writeUTF(username);
         stream.writeUTF(text);
