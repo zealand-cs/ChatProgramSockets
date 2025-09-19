@@ -119,7 +119,7 @@ public class ServerState {
 }
 
 class Room {
-    private static final EmojiReplacer replacer = new EmojiReplacer("emojiLookup.csv");
+    private static final EmojiReplacer replacer = new EmojiReplacer("/emojiLookup.csv");
 
     private String id;
     private String name;
