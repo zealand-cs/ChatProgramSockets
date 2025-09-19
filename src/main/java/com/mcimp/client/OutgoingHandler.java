@@ -6,21 +6,21 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jline.reader.UserInterruptException;
 
-import com.mcimp.protocol.ProtocolOutputStream;
-import com.mcimp.protocol.commands.JoinCommand;
-import com.mcimp.protocol.messages.TextMessage;
-import com.mcimp.protocol.packets.AuthPacket;
-import com.mcimp.protocol.packets.AuthType;
-import com.mcimp.protocol.packets.DisconnectPacket;
+import com.mcimp.protocol.client.ClientOutputStream;
+import com.mcimp.protocol.client.packets.AuthenticatePacket;
+import com.mcimp.protocol.client.packets.AuthenticationType;
+import com.mcimp.protocol.client.packets.DisconnectPacket;
+import com.mcimp.protocol.client.packets.JoinRoomPacket;
+import com.mcimp.protocol.client.packets.MessagePacket;
 
 public class OutgoingHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(OutgoingHandler.class);
 
-    private final ProtocolOutputStream stream;
+    private final ClientOutputStream stream;
 
     private final ClientTerminal terminal;
 
-    public OutgoingHandler(ProtocolOutputStream stream, ClientTerminal terminal) {
+    public OutgoingHandler(ClientOutputStream stream, ClientTerminal terminal) {
         this.stream = stream;
         this.terminal = terminal;
     }
@@ -36,7 +36,7 @@ public class OutgoingHandler implements Runnable {
                     continue;
                 }
 
-                var message = new TextMessage(line);
+                var message = new MessagePacket(line);
                 stream.send(message);
             }
         } catch (UserInterruptException ex) {
@@ -51,7 +51,7 @@ public class OutgoingHandler implements Runnable {
 
         switch (args[0]) {
             case "join":
-                var join = new JoinCommand(args[1]);
+                var join = new JoinRoomPacket(args[1]);
                 stream.send(join);
                 break;
             case "login":
@@ -60,7 +60,7 @@ public class OutgoingHandler implements Runnable {
                     terminal.flush();
                     return;
                 }
-                var loginAuth = new AuthPacket(AuthType.Login, args[1], args[2]);
+                var loginAuth = new AuthenticatePacket(AuthenticationType.Login, args[1], args[2]);
                 stream.send(loginAuth);
                 break;
             case "register":
@@ -69,7 +69,7 @@ public class OutgoingHandler implements Runnable {
                     terminal.flush();
                     return;
                 }
-                var registerAuth = new AuthPacket(AuthType.Register, args[1], args[2]);
+                var registerAuth = new AuthenticatePacket(AuthenticationType.Register, args[1], args[2]);
                 stream.send(registerAuth);
                 break;
             case "quit", "exit":

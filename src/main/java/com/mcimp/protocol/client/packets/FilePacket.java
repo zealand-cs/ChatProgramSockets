@@ -1,12 +1,16 @@
-package com.mcimp.protocol.messages;
+package com.mcimp.protocol.client.packets;
 
-public class FileMessage extends Message {
-    private final static MessageType MESSAGE_TYPE = MessageType.File;
+import com.mcimp.protocol.client.ClientPacket;
+import com.mcimp.protocol.client.ClientPacketId;
 
-    // private String file;
+// TODO: actually make it work
+public class FilePacket extends ClientPacket {
+    private final static ClientPacketId PACKET_ID = ClientPacketId.Connect;
 
-    public FileMessage(String text) {
-        super(MESSAGE_TYPE);
+    private String path;
+
+    public FilePacket(String path) {
+        super(PACKET_ID);
     }
 
     // public FileMessage(Message messagePacket, String text) {

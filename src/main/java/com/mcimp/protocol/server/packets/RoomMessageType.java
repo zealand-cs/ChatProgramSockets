@@ -1,17 +1,17 @@
-package com.mcimp.protocol.commands;
+package com.mcimp.protocol.server.packets;
 
-public enum CommandType {
-    Join;
+public enum RoomMessageType {
+    User;
 
     public byte toByte() {
         return switch (this) {
-            case Join -> 1;
+            case User -> 1;
         };
     }
 
-    public static CommandType fromByte(byte c) {
+    public static RoomMessageType fromByte(byte c) {
         return switch (c) {
-            case 1 -> Join;
+            case 1 -> User;
             default -> throw new RuntimeException("invalid packet type id");
         };
     }

@@ -1,13 +1,13 @@
-package com.mcimp.protocol.packets;
+package com.mcimp.protocol.client.packets;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 
-import com.mcimp.protocol.Packet;
-import com.mcimp.protocol.PacketType;
+import com.mcimp.protocol.client.ClientPacket;
+import com.mcimp.protocol.client.ClientPacketId;
 
-public class DisconnectPacket extends Packet {
-    private final static PacketType PACKET_TYPE = PacketType.Disconnect;
+public class DisconnectPacket extends ClientPacket {
+    private final static ClientPacketId PACKET_TYPE = ClientPacketId.Disconnect;
 
     public DisconnectPacket() {
         super(PACKET_TYPE);

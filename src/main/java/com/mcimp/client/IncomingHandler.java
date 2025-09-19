@@ -8,20 +8,19 @@ import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
 import org.apache.logging.log4j.LogManager;
 
-import com.mcimp.protocol.PacketType;
-import com.mcimp.protocol.ProtocolInputStream;
-import com.mcimp.protocol.messages.Message;
-import com.mcimp.protocol.messages.MessageType;
-import com.mcimp.protocol.messages.SystemMessage;
-import com.mcimp.protocol.messages.SystemMessageLevel;
+import com.mcimp.protocol.server.ServerInputStream;
+import com.mcimp.protocol.server.ServerPacketId;
+import com.mcimp.protocol.server.packets.SystemMessagePacket;
+import com.mcimp.protocol.server.packets.UserMessagePacket;
+import com.mcimp.protocol.server.packets.SystemMessageLevel;
 
 public class IncomingHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(IncomingHandler.class);
 
-    private final ProtocolInputStream stream;
+    private final ServerInputStream stream;
     private final ClientTerminal terminal;
 
-    public IncomingHandler(ProtocolInputStream stream, ClientTerminal terminal) {
+    public IncomingHandler(ServerInputStream stream, ClientTerminal terminal) {
         this.stream = stream;
         this.terminal = terminal;
     }
@@ -35,17 +34,23 @@ public class IncomingHandler implements Runnable {
 
         try {
             while (true) {
-                var packet = stream.readPacket();
+                var packet = stream.read();
 
                 switch (packet.getType()) {
-                    case PacketType.Connected:
+                    case ServerPacketId.Connected:
                         logger.info("Server: " + packet);
+                        // TODO: Correct output
                         break;
-                    case PacketType.Message:
-                        handleMessage((Message) packet);
+                    case ServerPacketId.Disconnected:
+                        logger.info("Server: " + packet);
+                        // TODO: Correct output
                         break;
-                    case PacketType.Connect, PacketType.Disconnect, PacketType.Auth, PacketType.Command:
-                        logger.warn("received packet meant for the server: ", packet.toString());
+                    case ServerPacketId.SystemMessage:
+                        handleSystemMessage((SystemMessagePacket) packet);
+                        break;
+                    case ServerPacketId.UserMessage:
+                        handleUserMessage((UserMessagePacket) packet);
+                        break;
                     default:
                         logger.warn("unhandled packet: ", packet.toString());
                 }
@@ -59,30 +64,23 @@ public class IncomingHandler implements Runnable {
         }
     }
 
-    private void handleMessage(Message message) {
-        switch (message.getMessageType()) {
-            case MessageType.System:
-                var systemMessage = (SystemMessage) message;
-                String msg = formatSystemMessage(systemMessage);
-                terminal.write(msg + "\n");
-                terminal.flush();
-                break;
-            default:
-                logger.warn("unhandled message type: " + message.toString());
-        }
+    private void handleSystemMessage(SystemMessagePacket message) {
+        String msg = formatSystemMessage(message);
+        terminal.write(msg + "\n");
+        terminal.flush();
     }
 
-    private String formatSystemMessage(SystemMessage message) {
+    private String formatSystemMessage(SystemMessagePacket message) {
         var str = switch (message.getLevel()) {
             case SystemMessageLevel.Pure -> new AttributedStringBuilder();
             case SystemMessageLevel.Info ->
-                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN));
+                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.bold());
             case SystemMessageLevel.Success ->
-                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN));
+                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.bold().foreground(AttributedStyle.GREEN));
             case SystemMessageLevel.Warning ->
-                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.YELLOW));
+                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.bold().foreground(AttributedStyle.YELLOW));
             case SystemMessageLevel.Error ->
-                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.foreground(AttributedStyle.RED));
+                new AttributedStringBuilder().style(AttributedStyle.DEFAULT.bold().foreground(AttributedStyle.RED));
         };
 
         if (message.getLevel() != SystemMessageLevel.Pure) {
@@ -91,6 +89,24 @@ public class IncomingHandler implements Runnable {
 
         str.append(message.getText())
                 .style(AttributedStyle.DEFAULT);
+
+        return str.toAnsi();
+    }
+
+    private void handleUserMessage(UserMessagePacket packet) {
+        String msg = formatUserMessage(packet);
+        terminal.write(msg + "\n");
+        terminal.flush();
+    }
+
+    private String formatUserMessage(UserMessagePacket packet) {
+        var str = new AttributedStringBuilder();
+
+        str.append(packet.getTime().toString());
+        str.append(" ");
+        str.append(packet.getUsername());
+        str.append(": ");
+        str.append(packet.getText());
 
         return str.toAnsi();
     }

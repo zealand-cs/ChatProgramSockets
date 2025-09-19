@@ -4,20 +4,17 @@ import java.io.*;
 import java.net.Socket;
 import java.net.SocketException;
 
-import com.mcimp.protocol.Packet;
-import com.mcimp.protocol.PacketType;
-import com.mcimp.protocol.ProtocolInputStream;
-import com.mcimp.protocol.ProtocolOutputStream;
-import com.mcimp.protocol.commands.Command;
-import com.mcimp.protocol.commands.CommandType;
-import com.mcimp.protocol.commands.JoinCommand;
-import com.mcimp.protocol.messages.Message;
-import com.mcimp.protocol.messages.MessageType;
-import com.mcimp.protocol.messages.SystemMessage;
-import com.mcimp.protocol.messages.SystemMessageLevel;
-import com.mcimp.protocol.messages.TextMessage;
-import com.mcimp.protocol.packets.AuthPacket;
-import com.mcimp.protocol.packets.AuthType;
+import com.mcimp.utils.EmojiReplacer;
+import com.mcimp.protocol.client.ClientInputStream;
+import com.mcimp.protocol.client.ClientPacket;
+import com.mcimp.protocol.client.ClientPacketId;
+import com.mcimp.protocol.client.packets.AuthenticatePacket;
+import com.mcimp.protocol.client.packets.AuthenticationType;
+import com.mcimp.protocol.client.packets.JoinRoomPacket;
+import com.mcimp.protocol.client.packets.MessagePacket;
+import com.mcimp.protocol.server.ServerOutputStream;
+import com.mcimp.protocol.server.packets.SystemMessagePacket;
+import com.mcimp.protocol.server.packets.UserMessagePacket;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,28 +22,32 @@ import org.apache.logging.log4j.Logger;
 public class ClientHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(ClientHandler.class);
 
+    private final EmojiReplacer replacer;
+
     private final Socket socket;
-    private final ProtocolInputStream input;
-    private final ProtocolOutputStream output;
+    private final ClientInputStream input;
+    private final ServerOutputStream output;
 
     private ServerState state;
 
     private String username;
 
-    public ClientHandler(Socket socket, ServerState state) throws IOException {
+    public ClientHandler(Socket socket, ServerState state, EmojiReplacer replacer) throws IOException {
         this.socket = socket;
-        this.input = new ProtocolInputStream(socket.getInputStream());
-        this.output = new ProtocolOutputStream(socket.getOutputStream());
+        this.input = new ClientInputStream(socket.getInputStream());
+        this.output = new ServerOutputStream(socket.getOutputStream());
         this.state = state;
+
+        this.replacer = replacer;
     }
 
     @Override
     public void run() {
         try {
             // Expect a connect packet as the first thing
-            Packet connect = input.readPacket();
-            assert connect.getType() == PacketType.Connect;
-            if (connect.getType() != PacketType.Connect) {
+            ClientPacket connect = input.read();
+            assert connect.getType() == ClientPacketId.Connect;
+            if (connect.getType() != ClientPacketId.Connect) {
                 logger.warn("closing socket: invalid first packet");
                 socket.close();
                 return;
@@ -54,11 +55,11 @@ public class ClientHandler implements Runnable {
 
             logger.info("connection established successfully");
 
-            output.send(SystemMessage.info("Welcome to the server!\n"));
-            output.send(SystemMessage.info("Login with `/login` or `/register`"));
+            output.send(SystemMessagePacket.builder().info().user().text("Welcome to the server!").build());
+            output.send(SystemMessagePacket.builder().info().user().text("Login with `/login` or `/register`").build());
 
             while (true) {
-                var packet = input.readPacket();
+                var packet = input.read();
                 handlePacket(packet);
             }
 
@@ -79,74 +80,29 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void handlePacket(Packet packet) throws IOException {
-        if (!state.isAuthenticated(socket) && packet.getType() != PacketType.Auth) {
-            output.send(SystemMessage.warn("Login with either `/login` or `/register` to do anything"));
+    private void handlePacket(ClientPacket packet) throws IOException {
+        if (!state.isAuthenticated(socket) && packet.getType() != ClientPacketId.Authenticate) {
+            output.send(SystemMessagePacket.builder().warn().user()
+                    .text("Login with either `/login` or `/register` to do anything").build());
             return;
         }
 
         switch (packet.getType()) {
-            case PacketType.Connect:
+            case ClientPacketId.Connect:
                 logger.warn("connect packet received. Socket already connected!");
                 break;
-            case PacketType.Disconnect:
+            case ClientPacketId.Disconnect:
                 state.removeClient(socket);
                 socket.close();
                 break;
-            case PacketType.Auth:
-                if (state.isAuthenticated(socket)) {
-                    output.send(SystemMessage.info("You're already authenticated"));
-                    return;
-                }
-                var authPacket = (AuthPacket) packet;
-
-                if (authPacket.getAuthType() == AuthType.Login) {
-                    if (!state.userExists(authPacket.getUsername())) {
-                        logger.warn(authPacket.getUsername() + " doesn't exist");
-                        output.send(SystemMessage.error("Invalid credentials."));
-                        return;
-                    }
-
-                    var authenticated = state.authenticate(authPacket.getUsername(), authPacket.getPassword());
-
-                    if (!authenticated) {
-                        logger.warn(authPacket.getUsername() + " logged in with wrong password");
-                        output.send(SystemMessage.error("Invalid credentials."));
-                        return;
-                    }
-                } else {
-                    if (state.userExists(authPacket.getUsername())) {
-                        logger.warn(authPacket.getUsername() + " tried to register with existing user");
-                        output.send(SystemMessage.error("User already exists."));
-                        return;
-                    }
-
-                    state.addAuthSession(authPacket.getUsername(), authPacket.getPassword());
-                }
-
-                username = authPacket.getUsername();
-                state.loginUser(socket, authPacket.getUsername());
-
-                logger.info("{} authenticated successfully", authPacket.getUsername());
-
-                output.send(SystemMessage.success("Successfully authenticated!"));
-                output.send(SystemMessage.info("Type `/help` to see your possibilities"));
-
-                var room = state.getClientRoom(socket);
-                room.broadcastAll(SystemMessage.info(username + " logged in!"));
-
-                logger.info("sending login info packet");
+            case ClientPacketId.Authenticate:
+                handleAuthenticate((AuthenticatePacket) packet);
                 break;
-            case PacketType.Command:
-                var command = (Command) packet;
-                handleCommand(command);
+            case ClientPacketId.JoinRoom:
+                handleJoinRoom((JoinRoomPacket) packet);
                 break;
-            case PacketType.Message:
-                var message = (Message) packet;
-                handleMessage(message);
-                break;
-            case PacketType.Connected, PacketType.Disconnected:
-                logger.warn("received packet meant for the client: ", packet.toString());
+            case ClientPacketId.Message:
+                handleMessage((MessagePacket) packet);
                 break;
             default:
                 logger.warn("unhandled packet: ", packet.toString());
@@ -154,74 +110,100 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void handleCommand(Command command) {
-        try {
-            switch (command.getCommandType()) {
-                case CommandType.Join:
-                    var join = (JoinCommand) command;
-                    var client = state.getClient(socket);
-
-                    var username = client.getUsername();
-                    var socket = client.getSocket();
-
-                    var oldRoom = state.getClientRoom(socket);
-                    if (oldRoom.getId().equals(join.getRoomId())) {
-                        output.send(SystemMessage.info("Already in " + join.getRoomId()));
-                        return;
-                    }
-
-                    Room newRoom;
-                    var targetRoom = state.getRoom(join.getRoomId());
-                    if (targetRoom.isEmpty()) {
-                        newRoom = state.createRoom(join.getRoomId());
-                        output.send(SystemMessage.info("Created now room " + join.getRoomId()));
-                    } else {
-                        newRoom = targetRoom.get();
-                    }
-
-                    state.moveClientToRoom(socket, newRoom);
-
-                    logger.info("[{}] {} > [{}] {}", oldRoom.getId(), username, join.getRoomId(), username);
-
-                    oldRoom.broadcastAll(new SystemMessage(SystemMessageLevel.Info, username + " left the room"));
-
-                    newRoom.broadcastAll(new SystemMessage(SystemMessageLevel.Info, username + " joined the room"));
-                    break;
-                default:
-                    logger.error("invalid command packet received: {}", command.toString());
-                    break;
-            }
-        } catch (IOException err) {
-            logger.error("error while sending to client: ", err);
+    private void handleAuthenticate(AuthenticatePacket authPacket) throws IOException {
+        if (state.isAuthenticated(socket)) {
+            output.send(SystemMessagePacket.builder().info().user().text("You're already authenticated!").build());
+            return;
         }
+
+        if (authPacket.getAuthType() == AuthenticationType.Login) {
+            if (!state.userExists(authPacket.getUsername())) {
+                logger.warn(authPacket.getUsername() + " doesn't exist");
+                output.send(SystemMessagePacket.builder().error().user().text("Invalid credentials.").build());
+                return;
+            }
+
+            var authenticated = state.authenticate(authPacket.getUsername(), authPacket.getPassword());
+
+            if (!authenticated) {
+                logger.warn(authPacket.getUsername() + " logged in with wrong password");
+                output.send(SystemMessagePacket.builder().error().user().text("Invalid credentials.").build());
+                return;
+            }
+        } else {
+            if (state.userExists(authPacket.getUsername())) {
+                logger.warn(authPacket.getUsername() + " tried to register with existing user");
+                output.send(SystemMessagePacket.builder().error().user().text("Username already taken").build());
+                return;
+            }
+
+            state.addAuthSession(authPacket.getUsername(), authPacket.getPassword());
+        }
+
+        username = authPacket.getUsername();
+        state.loginUser(socket, authPacket.getUsername());
+
+        logger.info("{} authenticated successfully", authPacket.getUsername());
+
+        output.send(SystemMessagePacket.builder().success().user().text("Successfully authenticated!").build());
+        output.send(SystemMessagePacket.builder().info().user().text("Type `/help` to see your possibilities").build());
+
+        var room = state.getClientRoom(socket);
+        room.broadcast(SystemMessagePacket.builder().info().user().text(username + " logged in!").build());
+
+        logger.info("sending login info packet");
     }
 
-    private void handleMessage(Message message) {
-        switch (message.getMessageType()) {
-            case MessageType.Text:
-                var text = (TextMessage) message;
-                var room = state.getClientRoom(socket);
+    private void handleJoinRoom(JoinRoomPacket join) throws IOException {
+        var builder = SystemMessagePacket.builder();
 
-                try {
-                    room.broadcast(this, text);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+        var client = state.getClient(socket);
 
-                var client = state.getClient(socket);
-                logger.info("[{}] {}: {}", room.getId(), client.getUsername(), text.getText());
-                break;
-            default:
-                logger.error("invalid message packet received: {}", message.toString());
-                break;
+        var username = client.getUsername();
+        var socket = client.getSocket();
+
+        var oldRoom = state.getClientRoom(socket);
+        if (oldRoom.getId().equals(join.getRoomId())) {
+            output.send(builder.info().user().text("Already connected to " + join.getRoomId()).build());
+            return;
         }
+
+        Room newRoom;
+        var targetRoom = state.getRoom(join.getRoomId());
+        if (targetRoom.isEmpty()) {
+            newRoom = state.createRoom(join.getRoomId());
+            output.send(builder.info().user().text("Created now room " + join.getRoomId()).build());
+        } else {
+            newRoom = targetRoom.get();
+        }
+
+        oldRoom.broadcast(builder.info().user().text(username + " left the room").build());
+        logger.info("[{}] {} > [{}] {}", oldRoom.getId(), username, join.getRoomId(), username);
+
+        state.moveClientToRoom(socket, newRoom);
+        newRoom.broadcast(builder.info().user().text(username + " joined the room").build());
+    }
+
+    private void handleMessage(MessagePacket packet) {
+        var room = state.getClientRoom(socket);
+
+        var text = replacer.replaceEmojis(packet.getText());
+        var roomPacket = new UserMessagePacket(username, text);
+
+        try {
+            room.broadcast(roomPacket, this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        logger.info("[{}] {}: {}", room.getId(), username, text);
     }
 
     public Socket getSocket() {
         return socket;
     }
 
-    public ProtocolOutputStream getOutputStream() {
+    public ServerOutputStream getOutputStream() {
         return output;
     }
 

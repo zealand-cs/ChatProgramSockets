@@ -1,4 +1,4 @@
-package com.mcimp.protocol.messages;
+package com.mcimp.protocol.server.packets;
 
 public enum SystemMessageLevel {
     /**

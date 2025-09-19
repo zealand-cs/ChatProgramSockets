@@ -7,21 +7,19 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import com.mcimp.protocol.commands.JoinCommand;
 import com.mcimp.repository.UserRepository;
 import com.mcimp.utils.BiMap;
-import com.mcimp.utils.EmojiReplacer;
 import com.mcimp.utils.HashBiMap;
 import com.mcimp.utils.SynchronizedBiMap;
 
 public class ServerState {
+    public static final String DEFAULT_ROOM = "global";
+
     private Map<Socket, ClientHandler> clients;
 
     private BiMap<Socket, String> authenticatedUsers;
 
     private UserRepository userRepository;
-
-    private EmojiReplacer replacer;
 
     private Room defaultRoom;
     private Map<String, Room> rooms;
@@ -33,11 +31,9 @@ public class ServerState {
         this.authenticatedUsers = new SynchronizedBiMap<>(new HashBiMap<>());
         this.userRepository = userRepository;
 
-        this.replacer = new EmojiReplacer("emojiLookup.csv");
-
         this.rooms = Collections.synchronizedMap(new HashMap<>());
         this.roomClients = Collections.synchronizedMap(new HashMap<>());
-        this.defaultRoom = createRoom(JoinCommand.DEFAULT_ROOM);
+        this.defaultRoom = createRoom(DEFAULT_ROOM);
     }
 
     public synchronized void addClient(Socket socket, ClientHandler client) {
@@ -74,7 +70,7 @@ public class ServerState {
     }
 
     public synchronized Room createRoom(String id) {
-        var room = new Room(id, replacer);
+        var room = new Room(id);
         rooms.put(id, room);
         return room;
     }
@@ -96,7 +92,7 @@ public class ServerState {
             oldRoom.removeClient(client);
 
             // If room is empty and NOT the default room, delete it.
-            if (oldRoom.isEmpty() && !oldRoom.getId().equals(JoinCommand.DEFAULT_ROOM)) {
+            if (oldRoom.isEmpty() && !oldRoom.getId().equals(DEFAULT_ROOM)) {
                 removeRoom(oldRoom.getId());
             }
         }

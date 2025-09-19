@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
+import com.mcimp.utils.EmojiReplacer;
 import com.mcimp.repository.UserRepository;
 
 public class Server {
@@ -40,9 +41,7 @@ public class Server {
 
     public void startServer() {
         running = true;
-        // String emojiLookupPath =
-        // this.getClass().getResource("emojiLookup.csv").getPath();
-        // EmojiReplace replacer = new EmojiReplace(emojiLookupPath);
+        EmojiReplacer replacer = new EmojiReplacer("emojiLookup.csv");
 
         // Try with resources automatically closes the ServerSocket if an exception
         // occurs
@@ -53,7 +52,7 @@ public class Server {
             while (running) {
                 Socket clientSocket = serverSocket.accept();
 
-                var client = new ClientHandler(clientSocket, state);
+                var client = new ClientHandler(clientSocket, state, replacer);
 
                 state.addClient(clientSocket, client);
 

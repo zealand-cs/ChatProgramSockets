@@ -1,6 +1,6 @@
-package com.mcimp.protocol.packets;
+package com.mcimp.protocol.client.packets;
 
-public enum AuthType {
+public enum AuthenticationType {
     Register,
     Login;
 
@@ -11,7 +11,7 @@ public enum AuthType {
         };
     }
 
-    public static AuthType fromByte(byte c) {
+    public static AuthenticationType fromByte(byte c) {
         return switch (c) {
             case 1 -> Register;
             case 2 -> Login;

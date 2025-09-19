@@ -3,7 +3,6 @@ package com.mcimp.client;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -14,10 +13,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.mcimp.protocol.ProtocolInputStream;
-import com.mcimp.protocol.ProtocolOutputStream;
-import com.mcimp.protocol.messages.SystemMessage;
-import com.mcimp.protocol.packets.ConnectPacket;
+import com.mcimp.protocol.client.ClientOutputStream;
+import com.mcimp.protocol.client.packets.ConnectPacket;
+import com.mcimp.protocol.server.ServerInputStream;
 
 public class Client {
     private static final Logger logger = LogManager.getLogger(Client.class);
@@ -42,14 +40,10 @@ public class Client {
             socket.connect(new InetSocketAddress(hostname, port), timeout);
 
             try (
-                    ProtocolInputStream input = new ProtocolInputStream(socket.getInputStream());
-                    ProtocolOutputStream output = new ProtocolOutputStream(socket.getOutputStream());) {
+                    var input = new ServerInputStream(socket.getInputStream());
+                    var output = new ClientOutputStream(socket.getOutputStream());) {
 
                 output.send(new ConnectPacket());
-
-                var welcomeMessage = (SystemMessage) input.readPacket();
-                terminal.write(welcomeMessage.getText() + "\n");
-                terminal.flush();
 
                 // Start multiple threads, waiting for
                 var tasks = new ArrayList<Callable<Object>>(2);
@@ -62,7 +56,6 @@ public class Client {
                 tasks.add(outgoingHandler);
 
                 pool.invokeAny(tasks);
-                // TODO: Handle exceptions, when added, then send confirmation or error
             } catch (ExecutionException ex) {
                 logger.info("closing everything down: ", ex);
             } catch (InterruptedException e) {

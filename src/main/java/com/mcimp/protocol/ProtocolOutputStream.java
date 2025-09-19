@@ -4,8 +4,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public class ProtocolOutputStream implements AutoCloseable {
-    private DataOutputStream stream;
+public abstract class ProtocolOutputStream implements AutoCloseable {
+    protected DataOutputStream stream;
 
     public ProtocolOutputStream(DataOutputStream stream) {
         this.stream = stream;
@@ -13,10 +13,6 @@ public class ProtocolOutputStream implements AutoCloseable {
 
     public ProtocolOutputStream(OutputStream stream) {
         this(new DataOutputStream(stream));
-    }
-
-    public void send(Packet packet) throws IOException {
-        packet.writeToStream(stream);
     }
 
     @Override

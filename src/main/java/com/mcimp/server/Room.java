@@ -2,49 +2,40 @@ package com.mcimp.server;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-import com.mcimp.protocol.Packet;
-import com.mcimp.protocol.messages.SystemMessage;
-import com.mcimp.protocol.messages.TextMessage;
-import com.mcimp.utils.EmojiReplacer;
+import com.mcimp.protocol.server.ServerPacket;
 
 class Room {
     private String id;
 
     private List<ClientHandler> clients;
 
-    private final EmojiReplacer replacer;
-
-    public Room(String id, EmojiReplacer replacer) {
+    public Room(String id) {
         this.id = id;
         this.clients = new ArrayList<>();
-
-        this.replacer = replacer;
     }
 
-    public void broadcastAll(Packet packet) throws IOException {
-        for (var client : clients) {
+    public void broadcast(ServerPacket packet) throws IOException {
+        broadcast(packet, new ClientHandler[0]);
+    }
+
+    public void broadcast(ServerPacket packet, ClientHandler exclude) throws IOException {
+        broadcast(packet, new ClientHandler[] { exclude });
+    }
+
+    public void broadcast(ServerPacket packet, ClientHandler[] exclude) throws IOException {
+        var excludedList = new ArrayList<>(clients);
+        excludedList.removeAll(Arrays.asList(exclude));
+
+        for (var client : excludedList) {
             client.getOutputStream().send(packet);
         }
     }
 
-    public void broadcast(ClientHandler sender, Packet packet) throws IOException {
-        var text = (TextMessage) packet;
-        var replaced = replacer.replaceEmojis(text.getText());
-
-        for (var client : clients) {
-            if (client == sender) {
-                continue;
-            }
-
-            client.getOutputStream()
-                    .send(SystemMessage.pure("[" + getId() + "] " + sender.getUsername() + ": " + replaced));
-        }
-    }
-
-    public void addClient(ClientHandler clien) {
-        clients.add(clien);
+    public void addClient(ClientHandler client) {
+        clients.add(client);
     }
 
     public void removeClient(ClientHandler client) {
