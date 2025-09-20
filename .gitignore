@@ -39,3 +39,4 @@ build/
 
 .direnv
 /logs
+/uploads

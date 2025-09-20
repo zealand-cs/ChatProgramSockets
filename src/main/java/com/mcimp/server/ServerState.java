@@ -35,7 +35,7 @@ public class ServerState implements AutoCloseable {
 
         try {
             this.userRepository = new UserRepository("users.json");
-            this.fileRepository = new TmpFileRepository("./tmpFiles");
+            this.fileRepository = new TmpFileRepository("./uploads");
         } catch (IOException ex) {
             throw new RuntimeException("users.json could not be read");
         }
