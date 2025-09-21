@@ -12,7 +12,6 @@
 
     <artifactId>chat-server</artifactId>
     <packaging>jar</packaging>
-    <name>chat-server</name>
 
     <dependencies>
         <dependency>

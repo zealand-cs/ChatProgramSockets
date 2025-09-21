@@ -18,10 +18,10 @@
     packages = eachSystem (
       pkgs: let
         jdk = pkgs."jdk${jdkVersion}";
-        mvnPkg = {
+        version = "0.1.0";
+        buildMvnPkg = {
           pname,
-          version,
-          mvnParameters,
+          mvnParameters ? "",
         }:
           pkgs.maven.buildMavenPackage rec {
             inherit pname version mvnParameters;
@@ -33,23 +33,31 @@
             nativeBuildInputs = [pkgs.makeWrapper];
 
             installPhase = ''
+              runHook preInstall
+
+              mkdir -p $out/bin $out/share/${pname}
               mkdir -p $out/bin $out/share/${pname}
               install -Dm644 target/${pname}.jar $out/share/${pname}
 
               makeWrapper ${jdk}/bin/java $out/bin/${pname} \
                 --add-flags "-jar $out/share/${pname}/${pname}.jar"
+
+              runHook postInstall
             '';
           };
       in {
-        server = mvnPkg {
-          pname = "chat-server";
-          version = "0.1.0";
-          mvnParameters = "-pl protocol,server -amd";
+        default = buildMvnPkg {
+          inherit version;
+          pname = "socket-chat";
         };
 
-        client = mvnPkg {
+        server = buildMvnPkg {
+          pname = "chat-server";
+          mvnParameters = "-pl server -amd";
+        };
+
+        client = buildMvnPkg {
           pname = "chat-client";
-          version = "0.1.0";
           mvnParameters = "-pl protocol,server -amd";
         };
       }

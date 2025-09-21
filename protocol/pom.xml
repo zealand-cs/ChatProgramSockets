@@ -12,5 +12,4 @@
 
     <artifactId>chat-protocol</artifactId>
     <packaging>jar</packaging>
-    <name>chat-protocol</name>
 </project>
