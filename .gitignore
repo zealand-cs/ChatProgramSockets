@@ -37,6 +37,6 @@ build/
 ### Mac OS ###
 .DS_Store
 
-.direnv
-/logs
-/uploads
+**/.direnv
+**/logs
+**/uploads

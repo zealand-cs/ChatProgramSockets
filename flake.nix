@@ -18,28 +18,39 @@
     packages = eachSystem (
       pkgs: let
         jdk = pkgs."jdk${jdkVersion}";
-        maven = pkgs.maven.override {jdk_headless = jdk;};
-        pname = "socket-chat-server";
-        jarName = "ChatProgramSockets-0.1.0";
+        mvnPkg = {
+          pname,
+          version,
+          mvnParameters,
+        }:
+          pkgs.maven.buildMavenPackage rec {
+            inherit pname version mvnParameters;
+            src = ./.;
+
+            mvnJdk = jdk;
+            mvnHash = "sha256-vd1EqcRJlb8onwBbZ/oDxDoL/oPUwGPJFrcHzQpyilY=";
+
+            nativeBuildInputs = [pkgs.makeWrapper];
+
+            installPhase = ''
+              mkdir -p $out/bin $out/share/${pname}
+              install -Dm644 target/${pname}.jar $out/share/${pname}
+
+              makeWrapper ${jdk}/bin/java $out/bin/${pname} \
+                --add-flags "-jar $out/share/${pname}/${pname}.jar"
+            '';
+          };
       in {
-        server = pkgs.maven.buildMavenPackage rec {
-          inherit pname;
+        server = mvnPkg {
+          pname = "chat-server";
           version = "0.1.0";
-          src = ./.;
+          mvnParameters = "-pl protocol,server -amd";
+        };
 
-          mvnParameters = "-Pclient";
-
-          mvnHash = "sha256-vd1EqcRJlb8onwBbZ/oDxDoL/oPUwGPJFrcHzQpyilY=";
-
-          nativeBuildInputs = [pkgs.makeWrapper];
-
-          installPhase = ''
-            mkdir -p $out/bin $out/share/${pname}
-            install -Dm644 target/${jarName}.jar $out/share/${pname}
-
-            makeWrapper ${jdk}/bin/java $out/bin/${pname} \
-              --add-flags "-jar $out/share/${pname}/${jarName}.jar"
-          '';
+        client = mvnPkg {
+          pname = "chat-client";
+          version = "0.1.0";
+          mvnParameters = "-pl protocol,server -amd";
         };
       }
     );

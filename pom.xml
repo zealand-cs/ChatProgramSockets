@@ -7,6 +7,9 @@
     <groupId>com.mcimp</groupId>
     <artifactId>ChatProgramSockets</artifactId>
     <version>0.1.0</version>
+    <packaging>pom</packaging>
+
+    <name>socket-chat</name>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -14,78 +17,43 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
-    <dependencies>
-        <!-- Logging -->
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.20.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>2.20.0</version>
-        </dependency>
+    <modules>
+        <module>protocol</module>
+        <module>client</module>
+        <module>server</module>
+    </modules>
 
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.11.0</version>
-        </dependency>
+    <dependencyManagement>
+        <dependencies>
+            <!-- Logging -->
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>2.20.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>2.20.0</version>
+            </dependency>
 
-        <dependency>
-            <groupId>org.jline</groupId>
-            <artifactId>jline</artifactId>
-            <version>3.30.6</version>
-        </dependency>
-    </dependencies>
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>2.11.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
-    <profiles>
-        <profile>
-            <id>server</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-                <property>
-                  <name>server</name>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.5.1</version>
-                        <configuration>
-                          <executable>maven</executable>
-                            <mainClass>com.mcimp.server.Server</mainClass>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-
-        <profile>
-            <id>client</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-                <property>
-                  <name>client</name>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
-                        <version>3.5.1</version>
-                        <configuration>
-                          <executable>maven</executable>
-                            <mainClass>com.mcimp.client.Client</mainClass>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>3.5.1</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>
