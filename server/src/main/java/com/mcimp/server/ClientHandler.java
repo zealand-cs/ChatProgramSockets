@@ -265,7 +265,7 @@ public class ClientHandler implements Runnable {
         var roomPacket = new UserMessagePacket(username, room.getId(), text);
 
         try {
-            room.broadcast(roomPacket, this);
+            room.broadcast(roomPacket);
         } catch (IOException e) {
             e.printStackTrace();
         }

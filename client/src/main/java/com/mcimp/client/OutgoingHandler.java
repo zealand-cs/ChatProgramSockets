@@ -39,6 +39,8 @@ public class OutgoingHandler implements Runnable {
                     continue;
                 }
 
+                terminal.clearPrevLine();
+
                 var message = new MessagePacket(line);
                 stream.send(message);
             }

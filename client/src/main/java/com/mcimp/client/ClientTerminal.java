@@ -2,15 +2,18 @@ package com.mcimp.client;
 
 import java.io.IOException;
 
+import org.jline.utils.InfoCmp;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.PrintAboveWriter;
 import org.jline.reader.UserInterruptException;
+import org.jline.terminal.Attributes;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.Terminal.Signal;
 import org.jline.terminal.Terminal.SignalHandler;
 import org.jline.terminal.TerminalBuilder;
+import org.jline.terminal.Attributes.LocalFlag;
 
 public class ClientTerminal implements AutoCloseable {
     private Terminal terminal;
@@ -20,6 +23,11 @@ public class ClientTerminal implements AutoCloseable {
     public ClientTerminal() {
         try {
             terminal = TerminalBuilder.builder().system(true).build();
+            var originalAttributes = terminal.getAttributes();
+            var rawAttributes = new Attributes(originalAttributes);
+            rawAttributes.setLocalFlag(LocalFlag.ICANON, false);
+            rawAttributes.setLocalFlag(LocalFlag.ECHO, false);
+            terminal.setAttributes(rawAttributes);
             reader = LineReaderBuilder.builder().terminal(terminal).build();
             writer = new PrintAboveWriter(reader);
         } catch (IOException ex) {
@@ -45,6 +53,12 @@ public class ClientTerminal implements AutoCloseable {
 
     public void handle(Signal signal, SignalHandler handler) {
         terminal.handle(signal, handler);
+    }
+
+    public void clearPrevLine() {
+        terminal.puts(InfoCmp.Capability.cursor_up);
+        terminal.puts(InfoCmp.Capability.clr_eos);
+        terminal.flush();
     }
 
     public String readLine() throws UserInterruptException, EndOfFileException {
