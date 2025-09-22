@@ -124,6 +124,7 @@ public class ClientHandler implements Runnable {
                 logger.warn("file upload packet with metadata packet received. It is safe to ignore this warning.");
                 break;
             case ClientPacketId.FileDownloadRequest:
+                logger.info("file download request");
                 handleFileDownloadRequest((FileDownloadRequestPacket) packet);
                 break;
             default:
@@ -190,7 +191,11 @@ public class ClientHandler implements Runnable {
 
         // Currently stops all UI on server terminal propably because System.out gets
         // blocked or something
+        logger.info("reading client file");
         FileUploadPacket.readInputStreamToStream(input.getInnerStream(), fileStream);
+        output.send(SystemMessagePacket.builder().info().user()
+                .text("File successfully uploaded. Download with id: " + fileId).build());
+        logger.info("file saved in temporary storage");
     }
 
     private void handleFileDownloadRequest(FileDownloadRequestPacket packet) throws IOException {
@@ -198,12 +203,15 @@ public class ClientHandler implements Runnable {
         var path = state.getFileRepository().getFilePath(id);
 
         if (path.isEmpty()) {
+            logger.debug("the requested file wasn't found");
             output.send(SystemMessagePacket.builder().error().user().text("File with id " + id + " not found").build());
             return;
         }
 
+        logger.info("sending file to client");
         output.send(new com.mcimp.protocol.server.packets.FileMetadataPacket(path.get()));
         output.send(new FileDownloadPacket(path.get()));
+        logger.info("file sent to client");
     }
 
     private void handleJoinRoom(JoinRoomPacket join) throws IOException {
