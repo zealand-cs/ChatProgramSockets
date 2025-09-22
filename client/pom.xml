@@ -16,7 +16,7 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>protocol</artifactId>
+            <artifactId>chat-protocol</artifactId>
             <version>${project.version}</version>
         </dependency>
 
@@ -39,14 +39,27 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <configuration>
-                    <executable>maven</executable>
-                    <mainClass>com.mcimp.client.Main</mainClass>
-                </configuration>
-            </plugin>
+            <plugin> 
+                <groupId>org.apache.maven.plugins</groupId>    
+                <artifactId>maven-shade-plugin</artifactId>            
+                <version>${maven.shade.plugin.version}</version>
+                <executions> 
+                    <execution> 
+                        <phase>package</phase> 
+                        <goals> 
+                            <goal>shade</goal> 
+                        </goals> 
+                        <configuration> 
+                            <transformers> 
+                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer"> 
+                                    <mainClass>com.mcimp.client.Main</mainClass> 
+                                </transformer> 
+                            </transformers> 
+                            <createDependencyReducedPom>false</createDependencyReducedPom>     
+                        </configuration> 
+                    </execution> 
+                </executions> 
+            </plugin> 
         </plugins>
     </build>
 </project>

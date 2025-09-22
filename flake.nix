@@ -19,47 +19,57 @@
       pkgs: let
         jdk = pkgs."jdk${jdkVersion}";
         version = "0.1.0";
-        buildMvnPkg = {
-          pname,
-          mvnParameters ? "",
-        }:
-          pkgs.maven.buildMavenPackage rec {
-            inherit pname version mvnParameters;
-            src = ./.;
+      in rec {
+        default = server;
 
-            mvnJdk = jdk;
-            mvnHash = "sha256-vd1EqcRJlb8onwBbZ/oDxDoL/oPUwGPJFrcHzQpyilY=";
-
-            nativeBuildInputs = [pkgs.makeWrapper];
-
-            installPhase = ''
-              runHook preInstall
-
-              mkdir -p $out/bin $out/share/${pname}
-              mkdir -p $out/bin $out/share/${pname}
-              install -Dm644 target/${pname}.jar $out/share/${pname}
-
-              makeWrapper ${jdk}/bin/java $out/bin/${pname} \
-                --add-flags "-jar $out/share/${pname}/${pname}.jar"
-
-              runHook postInstall
-            '';
-          };
-      in {
-        default = buildMvnPkg {
+        server = pkgs.maven.buildMavenPackage rec {
           inherit version;
-          pname = "socket-chat";
-        };
-
-        server = buildMvnPkg {
           pname = "chat-server";
-          mvnParameters = "-pl server -amd";
+          src = ./.;
+
+          mvnJdk = jdk;
+          mvnHash = "sha256-UEv7wQsGWrEO2ZrPPsJA6BfyJ9CBiMJKpGcg1f+k67g=";
+          mvnParameters = "-pl protocol,server -am";
+
+          nativeBuildInputs = [pkgs.makeWrapper];
+
+          installPhase = ''
+            runHook preInstall
+
+            mkdir -p $out/bin $out/share/${pname}
+            install -Dm644 server/target/${pname}-${version}.jar $out/share/${pname}
+
+            makeWrapper ${jdk}/bin/java $out/bin/${pname} \
+              --add-flags "-jar $out/share/${pname}/${pname}-${version}.jar"
+
+            runHook postInstall
+          '';
         };
 
-        client = buildMvnPkg {
+        client = pkgs.maven.buildMavenPackage rec {
+          inherit version;
           pname = "chat-client";
-          mvnParameters = "-pl protocol,server -amd";
+          src = ./.;
+
+          mvnJdk = jdk;
+          mvnHash = "sha256-lo3fZOqmKDviz73xqsgfPjLEqOqdM2N4yTgjeIXNKek=";
+          mvnParameters = "-pl protocol,client -am";
+
+          nativeBuildInputs = [pkgs.makeWrapper];
+
+          installPhase = ''
+            runHook preInstall
+
+            mkdir -p $out/bin $out/share/${pname}
+            install -Dm644 client/target/${pname}-${version}.jar $out/share/${pname}
+
+            makeWrapper ${jdk}/bin/java $out/bin/${pname} \
+              --add-flags "-jar $out/share/${pname}/${pname}-${version}.jar"
+
+            runHook postInstall
+          '';
         };
+
       }
     );
 

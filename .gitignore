@@ -40,3 +40,4 @@ build/
 **/.direnv
 **/logs
 **/uploads
+**/users.json
