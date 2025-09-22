@@ -1,21 +1,33 @@
 # Chat program over sockets
 
-## Run the program without an IDE
+## Run the thing
 
-### Client
+### Java
 
-```zsh
-mvn exec:java -Pclient
-```
+- Client
 
-### Server
+    ```zsh
+    mvn package
+    java -jar server/target/chat-server-<version>.jar
+    ```
 
-```zsh
-mvn exec:java
-```
+- Server
 
-or
+    ```zsh
+    mvn package
+    java -jar client/target/chat-client-<version>.jar
+    ```
 
-```zsh
-mvn exec:java -Pserver
-```    
+### Nix
+
+- Server
+
+    ```zsh
+    nix run .#server
+    ```
+
+- Client
+
+    ```zsh
+    nix run .#client
+    ```
