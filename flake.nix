@@ -28,7 +28,7 @@
           src = ./.;
 
           mvnJdk = jdk;
-          mvnHash = "sha256-UEv7wQsGWrEO2ZrPPsJA6BfyJ9CBiMJKpGcg1f+k67g=";
+          mvnHash = "sha256-mdsv3HcsdeXkIMFH5PDt9qaV1Xorrz6oXcy1wDwCOoI=";
           mvnParameters = "-pl protocol,server -am";
 
           nativeBuildInputs = [pkgs.makeWrapper];
