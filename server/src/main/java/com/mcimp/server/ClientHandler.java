@@ -10,10 +10,13 @@ import com.mcimp.protocol.client.ClientPacket;
 import com.mcimp.protocol.client.ClientPacketId;
 import com.mcimp.protocol.client.packets.AuthenticatePacket;
 import com.mcimp.protocol.client.packets.AuthenticationType;
+import com.mcimp.protocol.client.packets.FileDownloadRequestPacket;
+import com.mcimp.protocol.client.packets.FileMetadataPacket;
 import com.mcimp.protocol.client.packets.FileUploadPacket;
 import com.mcimp.protocol.client.packets.JoinRoomPacket;
 import com.mcimp.protocol.client.packets.MessagePacket;
 import com.mcimp.protocol.server.ServerOutputStream;
+import com.mcimp.protocol.server.packets.FileDownloadPacket;
 import com.mcimp.protocol.server.packets.SystemMessagePacket;
 import com.mcimp.protocol.server.packets.UserMessagePacket;
 
@@ -23,13 +26,12 @@ import org.apache.logging.log4j.Logger;
 public class ClientHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(ClientHandler.class);
 
-    private final EmojiReplacer replacer;
-
     private final Socket socket;
     private final ClientInputStream input;
     private final ServerOutputStream output;
 
     private ServerState state;
+    private final EmojiReplacer replacer;
 
     private String username;
 
@@ -115,8 +117,14 @@ public class ClientHandler implements Runnable {
             case ClientPacketId.Message:
                 handleMessage((MessagePacket) packet);
                 break;
+            case ClientPacketId.FileMetadata:
+                handleFileUpload((FileMetadataPacket) packet);
+                break;
             case ClientPacketId.FileUpload:
-                handleFileUpload(packet);
+                logger.warn("file upload packet with metadata packet received. It is safe to ignore this warning.");
+                break;
+            case ClientPacketId.FileDownloadRequest:
+                handleFileDownloadRequest((FileDownloadRequestPacket) packet);
                 break;
             default:
                 logger.warn("unhandled packet: ", packet.toString());
@@ -168,8 +176,14 @@ public class ClientHandler implements Runnable {
         logger.info("sending login info packet");
     }
 
-    private void handleFileUpload(ClientPacket packet) throws IOException {
+    private void handleFileUpload(FileMetadataPacket packet) throws IOException {
         logger.info("receiving file from client " + username);
+
+        var filePacket = input.read();
+        if (filePacket.getType() != ClientPacketId.FileUpload) {
+            logger.warn("received metadatapacket without corresponding file upload packet.");
+            return;
+        }
 
         var fileId = state.getFileRepository().createFileId();
         var fileStream = state.getFileRepository().fileStream(fileId);
@@ -177,6 +191,19 @@ public class ClientHandler implements Runnable {
         // Currently stops all UI on server terminal propably because System.out gets
         // blocked or something
         FileUploadPacket.readInputStreamToStream(input.getInnerStream(), fileStream);
+    }
+
+    private void handleFileDownloadRequest(FileDownloadRequestPacket packet) throws IOException {
+        var id = packet.getFileId();
+        var path = state.getFileRepository().getFilePath(id);
+
+        if (path.isEmpty()) {
+            output.send(SystemMessagePacket.builder().error().user().text("File with id " + id + " not found").build());
+            return;
+        }
+
+        output.send(new com.mcimp.protocol.server.packets.FileMetadataPacket(path.get()));
+        output.send(new FileDownloadPacket(path.get()));
     }
 
     private void handleJoinRoom(JoinRoomPacket join) throws IOException {

@@ -39,13 +39,11 @@ public class Client {
         terminal.writeln("Connect to a remote server or type `.` to connect locally");
         terminal.flush();
 
-        var connectionString = terminal.readLine();
+        var connectionString = terminal.readLine("host > ");
 
-        String hostname;
+        String hostname = "127.0.0.1";
         int port = DEFAULT_PORT;
-        if (connectionString.equals(".")) {
-            hostname = "127.0.0.1";
-        } else {
+        if (!connectionString.equals(".")) {
             var splitted = connectionString.split(":", 2);
             hostname = splitted[0];
             if (splitted.length > 1 && splitted[1] != null) {

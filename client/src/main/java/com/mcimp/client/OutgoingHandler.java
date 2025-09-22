@@ -1,6 +1,7 @@
 package com.mcimp.client;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Arrays;
 
 import org.apache.logging.log4j.LogManager;
@@ -12,6 +13,8 @@ import com.mcimp.protocol.client.ClientPacketId;
 import com.mcimp.protocol.client.packets.AuthenticatePacket;
 import com.mcimp.protocol.client.packets.AuthenticationType;
 import com.mcimp.protocol.client.packets.FileUploadPacket;
+import com.mcimp.protocol.client.packets.FileDownloadRequestPacket;
+import com.mcimp.protocol.client.packets.FileMetadataPacket;
 import com.mcimp.protocol.client.packets.JoinRoomPacket;
 import com.mcimp.protocol.client.packets.MessagePacket;
 import com.mcimp.protocol.client.packets.UnitPacket;
@@ -102,8 +105,18 @@ public class OutgoingHandler implements Runnable {
                     return;
                 }
                 // Join together rest of args, since that would just be a filepath with spaces
-                var file = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
-                stream.send(new FileUploadPacket(file));
+                var uploadFile = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+                stream.send(new FileMetadataPacket(Paths.get(uploadFile)));
+                stream.send(new FileUploadPacket(uploadFile));
+                break;
+            case "download":
+                if (args.length < 2) {
+                    terminal.writeln("Usage: /download <fileId>");
+                    terminal.flush();
+                    return;
+                }
+                var downloadFile = args[1];
+                stream.send(new FileDownloadRequestPacket(downloadFile));
                 break;
             case "help":
                 printHelp();
@@ -131,8 +144,8 @@ public class OutgoingHandler implements Runnable {
         terminal.writeln("  lists users on the server");
         terminal.writeln("/upload <file>");
         terminal.writeln("  uploads a file to the server");
-        terminal.writeln("/download <fileId> <targetFile>");
-        terminal.writeln("  downloads a file from the server");
+        terminal.writeln("/download <fileId>");
+        terminal.writeln("  downloads a file from the server to downloads directory");
         terminal.writeln("/help");
         terminal.writeln("  prints this help list");
         terminal.flush();

@@ -12,7 +12,7 @@ public class FileDownloadRequestPacket extends ClientPacket {
 
     private String fileId;
 
-    public FileDownloadRequestPacket(String fileId) {
+	public FileDownloadRequestPacket(String fileId) {
         super(PACKET_ID);
         this.fileId = fileId;
     }
@@ -26,4 +26,8 @@ public class FileDownloadRequestPacket extends ClientPacket {
         var fileId = stream.readUTF();
         return new FileDownloadRequestPacket(fileId);
     }
+
+    public String getFileId() {
+		return fileId;
+	}
 }

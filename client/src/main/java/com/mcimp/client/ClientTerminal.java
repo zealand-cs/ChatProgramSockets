@@ -61,12 +61,21 @@ public class ClientTerminal implements AutoCloseable {
         terminal.flush();
     }
 
+
     public String readLine() throws UserInterruptException, EndOfFileException {
         return readLinePrompt("> ");
     }
 
     public String readLine(Character mask) throws UserInterruptException, EndOfFileException {
         return readLinePrompt("> ", mask);
+    }
+
+    public String readLine(String prompt) throws UserInterruptException, EndOfFileException {
+        return readLinePrompt(prompt);
+    }
+
+    public String readLine(String prompt, Character mask) throws UserInterruptException, EndOfFileException {
+        return readLinePrompt(prompt, mask);
     }
 
     public String readLinePrompt(String prompt) throws UserInterruptException, EndOfFileException {

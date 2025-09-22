@@ -5,8 +5,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import com.mcimp.protocol.PacketInterface;
+import com.mcimp.protocol.server.packets.UnitPacket;
 import com.mcimp.protocol.server.packets.ConnectedPacket;
 import com.mcimp.protocol.server.packets.DisconnectedPacket;
+import com.mcimp.protocol.server.packets.FileMetadataPacket;
 import com.mcimp.protocol.server.packets.SystemMessagePacket;
 import com.mcimp.protocol.server.packets.UserMessagePacket;
 
@@ -32,6 +34,8 @@ public abstract class ServerPacket implements PacketInterface {
             case ServerPacketId.Disconnected -> DisconnectedPacket.readFromStream(stream);
             case ServerPacketId.SystemMessage -> SystemMessagePacket.readFromStream(stream);
             case ServerPacketId.UserMessage -> UserMessagePacket.readFromStream(stream);
+            case ServerPacketId.FileMetadata -> FileMetadataPacket.readFromStream(stream);
+            case ServerPacketId.FileDownload -> new UnitPacket(ServerPacketId.FileDownload);
         };
     }
 

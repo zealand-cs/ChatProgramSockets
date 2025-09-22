@@ -2,6 +2,10 @@ package com.mcimp.client;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.apache.logging.log4j.Logger;
 import org.jline.utils.AttributedStringBuilder;
@@ -12,10 +16,15 @@ import com.mcimp.protocol.server.ServerInputStream;
 import com.mcimp.protocol.server.ServerPacketId;
 import com.mcimp.protocol.server.packets.SystemMessagePacket;
 import com.mcimp.protocol.server.packets.UserMessagePacket;
+import com.mcimp.protocol.server.packets.FileDownloadPacket;
+import com.mcimp.protocol.server.packets.FileMetadataPacket;
 import com.mcimp.protocol.server.packets.SystemMessageLevel;
 
 public class IncomingHandler implements Runnable {
     private static final Logger logger = LogManager.getLogger(IncomingHandler.class);
+
+    // TODO choose download dir
+    private final Path downloadDirectory;
 
     private final ServerInputStream stream;
     private final ClientTerminal terminal;
@@ -23,6 +32,17 @@ public class IncomingHandler implements Runnable {
     public IncomingHandler(ServerInputStream stream, ClientTerminal terminal) {
         this.stream = stream;
         this.terminal = terminal;
+
+        this.downloadDirectory = Paths.get("./downloads");
+
+        // Create directory if it doesn't exist
+        try {
+            Files.createDirectory(downloadDirectory);
+        } catch (FileAlreadyExistsException ex) {
+            // Ignore. This is good.
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
+        }
     }
 
     @Override
@@ -43,6 +63,10 @@ public class IncomingHandler implements Runnable {
                     case ServerPacketId.UserMessage:
                         handleUserMessage((UserMessagePacket) packet);
                         break;
+                    case ServerPacketId.FileMetadata:
+                        handleFileDownload((FileMetadataPacket) packet);
+                    case ServerPacketId.FileDownload:
+                        logger.warn("file download packet with no metadata beforehand");
                     default:
                         logger.warn("unhandled packet: ", packet.toString());
                 }
@@ -118,5 +142,23 @@ public class IncomingHandler implements Runnable {
         str.append(packet.getText());
 
         return str.toAnsi();
+    }
+
+    private void handleFileDownload(FileMetadataPacket packet) {
+        try {
+            var filePacket = stream.read();
+            if (filePacket.getType() != ServerPacketId.FileDownload) {
+                logger.warn("received metadatapacket without corresponding file upload packet. "
+                        + filePacket.getType().toByte());
+                return;
+            }
+
+            var filePath = downloadDirectory.resolve(packet.getFileName());
+            var fileStream = Files.newOutputStream(filePath);
+
+            FileDownloadPacket.readInputStreamToStream(stream.getInnerStream(), fileStream);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
     }
 }
