@@ -1,5 +1,6 @@
 package com.mcimp.client;
 
+import java.io.BufferedOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
@@ -56,6 +57,8 @@ public class IncomingHandler implements Runnable {
             while (true) {
                 var packet = stream.read();
 
+                logger.trace("received packet " + packet.getType().getName());
+
                 switch (packet.getType()) {
                     case ServerPacketId.Connected:
                         break;
@@ -69,10 +72,12 @@ public class IncomingHandler implements Runnable {
                         break;
                     case ServerPacketId.FileMetadata:
                         handleFileDownload((FileMetadataPacket) packet);
+                        break;
                     case ServerPacketId.FileDownload:
                         logger.warn("file download packet with no metadata beforehand");
+                        break;
                     default:
-                        logger.warn("unhandled packet: ", packet.toString());
+                        logger.warn("unhandled packet: " + packet.getType().toString());
                 }
             }
         } catch (EOFException ex) {
@@ -124,7 +129,7 @@ public class IncomingHandler implements Runnable {
 
     private void handleUserMessage(UserMessagePacket packet) {
         String msg = formatUserMessage(packet);
-        terminal.write(msg + "\n");
+        terminal.writeln(msg);
         terminal.flush();
     }
 
@@ -148,21 +153,23 @@ public class IncomingHandler implements Runnable {
         return str.toAnsi();
     }
 
-    private void handleFileDownload(FileMetadataPacket packet) {
-        try {
-            var filePacket = stream.read();
-            if (filePacket.getType() != ServerPacketId.FileDownload) {
-                logger.warn("received metadatapacket without corresponding file upload packet. "
-                        + filePacket.getType().toByte());
-                return;
-            }
+    private void handleFileDownload(FileMetadataPacket packet) throws IOException {
+        var filePacket = stream.read();
+        if (filePacket.getType() != ServerPacketId.FileDownload) {
+            logger.warn("received metadatapacket without corresponding file upload packet. "
+                    + filePacket.getType().getName());
+            return;
+        }
 
-            var filePath = downloadDirectory.resolve(packet.getFileName());
-            var fileStream = Files.newOutputStream(filePath);
+        logger.trace("got download packet");
 
+        var filePath = downloadDirectory.resolve(packet.getFileName());
+        try (var fileStream = new BufferedOutputStream(Files.newOutputStream(filePath))) {
             FileDownloadPacket.readInputStreamToStream(stream.getInnerStream(), fileStream);
+            terminal.writeln("File downloaded successfully. Find it at " + filePath.toString());
+            terminal.flush();
         } catch (IOException ex) {
-            ex.printStackTrace();
+            logger.info("error downloading file: " + ex);
         }
     }
 }

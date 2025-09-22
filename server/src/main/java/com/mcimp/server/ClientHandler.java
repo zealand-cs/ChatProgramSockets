@@ -208,6 +208,8 @@ public class ClientHandler implements Runnable {
             return;
         }
 
+        output.send(SystemMessagePacket.builder().info().user().text("Sending file...").build());
+
         logger.info("sending file to client");
         output.send(new com.mcimp.protocol.server.packets.FileMetadataPacket(path.get()));
         output.send(new FileDownloadPacket(path.get()));

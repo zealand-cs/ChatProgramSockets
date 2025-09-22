@@ -5,16 +5,12 @@
         <File name="LOGFILE" fileName="logs/client.log" append="true">
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level: %msg%n" />
         </File>
-        <Console name="STDOUT">
-            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%t] %-5level: %msg%n" />
-        </Console>
     </Appenders>
 
     <Loggers>
         <!-- Root logger -->
-        <Root level="debug">
+        <Root level="trace">
             <AppenderRef ref="LOGFILE" />
-            <AppenderRef ref="STDOUT" />
         </Root>
     </Loggers>
 </Configuration>

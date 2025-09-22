@@ -1,10 +1,8 @@
 package com.mcimp.protocol.client.packets;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -29,42 +27,37 @@ public class FileUploadPacket extends ClientPacket {
     }
 
     @Override
-    protected void writeToStreamImpl(DataOutputStream stream) throws IOException {
+    protected void writeToStreamImpl(DataOutputStream input) throws IOException {
         var fileSize = Files.size(path);
-        stream.writeLong(fileSize);
+        input.writeLong(fileSize);
 
-        try (
-                var fileInput = new FileInputStream(path.toString());
-                var bufferedFileInput = new BufferedInputStream(fileInput);) {
+        try (var bufferedInput = new BufferedInputStream(Files.newInputStream(path))) {
+            // Buffer of 4kb
             var buffer = new byte[4 * 1024];
-
             int fileBytes;
-            while ((fileBytes = fileInput.read(buffer)) != -1) {
-                stream.write(buffer, 0, fileBytes);
+            while ((fileBytes = bufferedInput.read(buffer)) != -1) {
+                input.write(buffer, 0, fileBytes);
             }
         } catch (IOException ex) {
             throw ex;
         }
     }
 
-    public static void readInputStreamToStream(DataInputStream stream, OutputStream out) throws IOException {
-        var fileSize = stream.readLong();
+    public static void readInputStreamToStream(DataInputStream input, OutputStream output) throws IOException {
+        var fileSize = input.readLong();
 
-        try (var bufferedFileOutput = new BufferedOutputStream(out)) {
-            var buffer = new byte[4 * 1024];
+        // Buffer of 4kb
+        var buffer = new byte[4 * 1024];
 
-            long totalBytesRead = 0;
+        long totalBytesRead = 0;
 
-            // Math.min used for reading either the entire buffer or only whats left of the
-            // file.
-            while (totalBytesRead < fileSize) {
-                int fileBytes = stream.read(buffer, 0, (int) Math.min(buffer.length, fileSize - totalBytesRead));
-
-                bufferedFileOutput.write(buffer, 0, fileBytes);
-                totalBytesRead += fileBytes;
-            }
-        } catch (IOException ex) {
-            throw ex;
+        // Math.min used for reading either the entire buffer or only whats left of the
+        // file.
+        var bytes = 0;
+        while (totalBytesRead < fileSize && (bytes = input.read(buffer, 0,
+                (int) Math.min(buffer.length, fileSize - totalBytesRead))) != -1) {
+            output.write(buffer, 0, bytes);
+            totalBytesRead += bytes;
         }
     }
 }

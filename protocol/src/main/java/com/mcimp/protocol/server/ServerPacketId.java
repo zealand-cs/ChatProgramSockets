@@ -12,6 +12,10 @@ public enum ServerPacketId {
     FileMetadata,
     FileDownload;
 
+    public String getName() {
+        return this.toString();
+    }
+
     public byte toByte() {
         return switch (this) {
             case Connected -> Packets.SERVER_CONNECTED;
