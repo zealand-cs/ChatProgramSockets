@@ -59,12 +59,13 @@ public class OutgoingHandler implements Runnable {
 
         switch (command) {
             case "login":
-                if (args.length != 3 || args[1] == null || args[2] == null) {
-                    terminal.writeln("Usage: /login <username> <password>");
+                if (args.length != 2 || args[1] == null) {
+                    terminal.writeln("Usage: /login <username>");
                     terminal.flush();
                     return;
                 }
-                var loginAuth = new AuthenticatePacket(AuthenticationType.Login, args[1], args[2]);
+                var password = terminal.readLine("password > ", '*');
+                var loginAuth = new AuthenticatePacket(AuthenticationType.Login, args[1], password);
                 stream.send(loginAuth);
                 break;
             case "register":
@@ -128,7 +129,7 @@ public class OutgoingHandler implements Runnable {
     }
 
     private void printHelp() {
-        terminal.writeln("/login <username> <password>");
+        terminal.writeln("/login <username>");
         terminal.writeln("  logs in to a specific user");
         terminal.writeln("/register <username> <password>");
         terminal.writeln("  registers a new user on the server");
