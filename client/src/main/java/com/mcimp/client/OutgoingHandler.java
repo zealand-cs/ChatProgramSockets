@@ -64,17 +64,18 @@ public class OutgoingHandler implements Runnable {
                     terminal.flush();
                     return;
                 }
-                var password = terminal.readLine("password > ", '*');
-                var loginAuth = new AuthenticatePacket(AuthenticationType.Login, args[1], password);
+                var loginPassword = terminal.readLine("password (hidden for security) > ", '\0');
+                var loginAuth = new AuthenticatePacket(AuthenticationType.Login, args[1], loginPassword);
                 stream.send(loginAuth);
                 break;
             case "register":
-                if (args.length != 3 || args[1] == null || args[2] == null) {
-                    terminal.writeln("Usage: /register <username> <password>");
+                if (args.length != 2 || args[1] == null) {
+                    terminal.writeln("Usage: /register <username>");
                     terminal.flush();
                     return;
                 }
-                var registerAuth = new AuthenticatePacket(AuthenticationType.Register, args[1], args[2]);
+                var registerPassword = terminal.readLine("password (hidden for security) > ", '\0');
+                var registerAuth = new AuthenticatePacket(AuthenticationType.Register, args[1], registerPassword);
                 stream.send(registerAuth);
                 break;
             case "logout":
@@ -131,7 +132,7 @@ public class OutgoingHandler implements Runnable {
     private void printHelp() {
         terminal.writeln("/login <username>");
         terminal.writeln("  logs in to a specific user");
-        terminal.writeln("/register <username> <password>");
+        terminal.writeln("/register <username>");
         terminal.writeln("  registers a new user on the server");
         terminal.writeln("/logout");
         terminal.writeln("  logs out of the server");
